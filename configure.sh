@@ -11,8 +11,6 @@ distro=$(uname -n)
 if [ "$distro" = "manjaro-gnome" ]; 
 then
     sh manjaro_user_installation.sh
-    cd ~
-    sudo rm -r ~/yay-git
 fi
 
 sudo usermod -aG docker $USER

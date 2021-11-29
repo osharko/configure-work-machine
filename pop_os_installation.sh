@@ -24,14 +24,14 @@ echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" 
 #ADDING TO REPO SECTION
 
 #NODEJS SECTION
-curl -sL https://deb.nodesource.com/setup_14.x | sudo bash -
+curl -sL https://deb.nodesource.com/setup_16.x | sudo bash -
 #NODEJS SECTION
 
 #APT SECTION
-apt update && apt upgrade -y && apt dist-upgrade -y
-apt remove libreoffice* -y
+apt update 
+apt remove libreoffice* geary -y
 apt install xclip xsel gparted htop make net-tools openjdk-16-jdk maven forticlient beekeeper-studio code nodejs
-apt autoremove && apt purge
+apt upgrade -y && apt dist-upgrade -y && apt autoremove && apt purge
 #APT SECTION
 
 #DOCKER SECTION

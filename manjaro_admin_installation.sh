@@ -1,7 +1,7 @@
 #PACMAN SECTION
 pacman -Syuu --noconfirm
 
-pacman -S --noconfirm git nodejs npm xclip xsel gparted htop make net-tools base-devel jdk-openjdk maven dotnet-sdk docker docker-compose
+pacman -S --noconfirm yay binutils base-devel git nodejs npm xclip xsel gparted htop make net-tools jdk-openjdk maven dotnet-sdk docker docker-compose mailspring
 
 pacman -Scc --noconfirm
 #PACMAN SECTION
