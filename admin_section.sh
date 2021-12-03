@@ -7,8 +7,12 @@ distro=$(uname -n)
 if [ "$distro" = "pop-os" ]; 
 then
     sh pop_os_installation.sh
-else
+fi
+
+if [[ "$distro" =~ "manjaro" ]]; 
+then
     sh manjaro_admin_installation.sh
+    systemctl enable --now docker
 fi
 #SOFTWARE INSTALLATION
 
