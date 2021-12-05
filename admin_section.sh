@@ -9,7 +9,7 @@ then
     sh pop_os_installation.sh
 fi
 
-if [[ "$distro" =~ "manjaro" ]]; 
+if [[ "$distro" =~ "Manjaro" ]]; 
 then
     sh manjaro_admin_installation.sh
     systemctl enable --now docker

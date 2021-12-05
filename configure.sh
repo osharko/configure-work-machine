@@ -8,7 +8,7 @@ cd ~/init_tmp
 sudo sh admin_section.sh
 
 distro=$(uname -n) 
-if [ "$distro" = "manjaro-gnome" ]; 
+if [[ "$distro" =~ "Manjaro" ]]; 
 then
     sh manjaro_user_installation.sh
 fi
