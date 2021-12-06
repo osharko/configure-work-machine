@@ -11,6 +11,7 @@ distro=$(uname -n)
 if [[ "$distro" =~ "Manjaro" ]]; 
 then
     sh manjaro_user_installation.sh
+    sudo systemctl enable teamviewerd.service
 fi
 
 sudo usermod -aG docker $USER
