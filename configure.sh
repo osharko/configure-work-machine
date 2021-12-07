@@ -7,8 +7,8 @@ cp *.sh ~/init_tmp
 cd ~/init_tmp
 sudo sh admin_section.sh
 
-distro=$(uname -n) 
-if [[ "$distro" =~ "Manjaro" ]]; 
+distro=$(uname -a) 
+if [[ "$distro" =~ "MANJARO" ]]; 
 then
     sh manjaro_user_installation.sh
     sudo systemctl enable teamviewerd.service
