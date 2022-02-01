@@ -1,6 +1,6 @@
 #INIT
 mkdir ~/init_tmp
-cp *.sh ~/init_tmp
+cp -r . ~/init_tmp
 #INIT
 
 #SOFTWARE INSTALLATION
