@@ -1,5 +1,5 @@
 #REVERSE PROXY SECTION
-echo "127.0.0.1 wedigitech.software-inside.it" >> /etc/hosts 
+#echo "127.0.0.1 wedigitech.software-inside.it" >> /etc/hosts 
 #REVERSE PROXY SECTION
 
 #SOFTWARE INSTALLATION

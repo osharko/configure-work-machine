@@ -12,6 +12,7 @@ if [[ "$distro" =~ "MANJARO" ]];
 then
     sh manjaro_user_installation.sh
     sudo systemctl enable teamviewerd.service
+    sudo systemctl start libvirtd.service
 fi
 
 sudo usermod -aG docker $USER

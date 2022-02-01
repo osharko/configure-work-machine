@@ -1,0 +1,9 @@
+[Unit]
+Description=Start the VPN
+
+[Service]
+Type=Simple
+ExecStart=/bin/bash /usr/start-vpn.sh
+
+[Install]
+WantedBy=multi-user.target
