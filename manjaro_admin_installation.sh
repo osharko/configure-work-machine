@@ -1,7 +1,7 @@
 #PACMAN SECTION
 pacman -Syuu --noconfirm
 
-pacman -S --noconfirm yay binutils base-devel git nodejs-lts-gallium npm xclip xsel gparted htop make net-tools jdk-openjdk maven dotnet-sdk docker docker-compose popsicle qemu qemu-headless virt-manager iputils openfortivpn
+pacman -S --noconfirm yay binutils base-devel git nodejs-lts-fermium npm xclip xsel gparted htop make net-tools jdk8-openjdk jdk-openjdk maven dotnet-sdk docker docker-compose popsicle qemu qemu-headless virt-manager iputils openfortivpn
 
 pacman -Scc --noconfirm
 #PACMAN SECTION
