@@ -21,7 +21,3 @@ sudo usermod -aG docker $USER
 #CONFIGURE_SSH_KEY
 sh configure_ssh_key.sh
 #CONFIGURE_SSH_KEY
-
-#CLONING GIT-REPO
-sh git_clone.sh
-#CLONING GIT-REPO
