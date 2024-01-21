@@ -1,0 +1,11 @@
+[Unit]
+Description=Data partition 1
+
+[Mount]
+What=/dev/disk/by-uuid/71f9e1ac-9de4-4222-b608-b139cf83ba91
+Where=/data/Data
+Type=auto
+Options=rw,noatime
+
+[Install]
+WantedBy=multi-user.target
