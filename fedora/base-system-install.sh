@@ -10,7 +10,7 @@ sudo dnf remove libreoffice-math libreoffice-calc libreoffice-draw libreoffice-w
 # update system
 sudo dnf update
 # install base packages
-sudo dnf install neofetch htop git zsh gcc gparted binutils make net-tools iputils go make qemu-kvm libvirt corectrl kate virt-manager timeshift xrdp virt-install -y
+sudo dnf install neofetch htop git obs-studio zsh gcc gparted binutils make net-tools iputils go make qemu-kvm libvirt corectrl kate virt-manager timeshift xrdp virt-install -y
 
 # Sublimetext repo
 sudo rpm -v --import https://download.sublimetext.com/sublimehq-rpm-pub.gpg
