@@ -7,7 +7,7 @@ sudo dnf config-manager --enable fedora-cisco-openh264 -y
 # Steam and 1password install
 sudo dnf install 1password steam -y
 # install tools for torrent release
-sudo dnf install mediainfo mkvtoolnix audacity wine -y
+sudo dnf install mediainfo mkvtoolnix audacity wine bottles -y
 sudo dnf group install Multimedia -y
 # Downloading Msty
 cd ~/Applications
