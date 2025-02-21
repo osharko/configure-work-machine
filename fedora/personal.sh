@@ -22,6 +22,9 @@ chown $(whoami):$(whoami) ~/.ssh
 cp authorized_keys id_rsa id_rsa.pub ~/.ssh/
 chmod -R 600 ~/.ssh/*
 chown -R $(whoami):$(whoami) ~/.ssh/*
+# xbox driver controller
+sudo dnf copr enable sentry/xone -y
+sudo dnf install xone -y
 
 #################CORECTRL#################
 # # Create a polkit rule for CoreCtrl
