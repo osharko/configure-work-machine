@@ -1,0 +1,21 @@
+# Wget log files (created when downloads fail)
+wget-log
+wget-log.*
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test VM files
+*.qcow2
+*.img
+
+# Backup files
+*.bak
+*.backup

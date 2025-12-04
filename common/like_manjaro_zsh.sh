@@ -99,9 +99,9 @@ download_font() {
     local retries=3
     local timeout=30
 
-    # Try wget first
+    # Try wget first (with explicit output file to prevent wget-log creation)
     for i in $(seq 1 $retries); do
-        if wget --timeout=$timeout --tries=1 -q "$url" -O "$output" 2>/dev/null; then
+        if wget --timeout=$timeout --tries=1 --no-verbose --output-document="$output" "$url" >/dev/null 2>&1; then
             return 0
         fi
         [ $i -lt $retries ] && sleep 2
