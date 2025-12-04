@@ -39,10 +39,6 @@ else
     echo "Flatpak already installed"
 fi
 
-# Add Flathub repository if not already added
-echo "Ensuring Flathub repository is configured..."
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
 # Install Flatpak applications
 echo ""
 echo "Installing Flatpak applications via Pop!_Shop/Flathub..."
