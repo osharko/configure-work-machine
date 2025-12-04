@@ -180,13 +180,6 @@ if [ -f ~/.zshrc ] && ! grep -q '$HOME/.local/bin' ~/.zshrc; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 fi
 
-# GNOME Extensions (Pop!_OS uses GNOME)
-echo ""
-echo "Installing GNOME Extension Manager..."
-sudo apt install -y gnome-shell-extension-manager || {
-    flatpak install -y flathub com.mattjakeman.ExtensionManager || true
-}
-
 echo ""
 echo "=== Pop!_OS package installation complete! ==="
 echo ""

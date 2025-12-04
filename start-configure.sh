@@ -25,6 +25,8 @@ SILENT_MODE=false
 
 # Parse command-line arguments
 show_help() {
+    echo "Pop!_OS Machine Configuration Script"
+    echo ""
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
@@ -39,7 +41,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0                    # Default mode"
-    echo "  $0 -i                 # Interactive mode"
+    echo "  $0 -i                 # Interactive mode (recommended)"
     echo "  $0 --yes              # Silent mode"
     echo ""
 }
@@ -70,7 +72,7 @@ done
 export INTERACTIVE_MODE
 export SILENT_MODE
 
-echo -e "${GREEN}=== Work Machine Configuration Script ===${NC}"
+echo -e "${GREEN}=== Pop!_OS Machine Configuration Script ===${NC}"
 echo ""
 
 if [ "$INTERACTIVE_MODE" = true ]; then
@@ -114,20 +116,20 @@ download_script() {
 get_script_description() {
     local script_name=$1
     case $script_name in
-        dnf.sh)
-            echo "Install system packages, development tools, and repositories (Fedora)"
-            ;;
         apt.sh)
-            echo "Install system packages, development tools, and repositories (Ubuntu/Pop!_OS)"
+            echo "Install system packages, development tools, and modern CLI tools"
             ;;
         zsh.sh)
-            echo "Set up Zsh shell with Powerlevel10k theme and install Homebrew + CLI tools"
+            echo "Set up Zsh shell with Powerlevel10k theme and install Homebrew + CLI tools (lazygit, lazydocker, eza, zoxide, bat, etc.)"
             ;;
         node_java.sh)
             echo "Install Node.js (via nvm) and Java (Amazon Corretto 8 & 21 via jenv)"
             ;;
         flatpak_and_service.sh)
-            echo "Configure system services (Docker, SSH, etc.) and install Flatpak applications"
+            echo "Configure system services (Docker, SSH, System76 Power) and install Flatpak applications (Bottles, Telegram, Discord, etc.)"
+            ;;
+        dell-oem-drivers.sh)
+            echo "Install Dell OEM hardware drivers (audio, fingerprint, firmware)"
             ;;
         *)
             echo "Execute $script_name"
@@ -178,43 +180,26 @@ detect_os
 echo -e "Detected OS: ${GREEN}${OS} ${VERSION}${NC}"
 echo ""
 
-# Declare script descriptions for the summary
-declare -A SCRIPT_DESCRIPTIONS
+# Check if Pop!_OS
+if [ "$OS" != "pop" ]; then
+    echo -e "${YELLOW}Warning: This script is optimized for Pop!_OS${NC}"
+    echo -e "Detected: $OS"
+    echo ""
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Installation cancelled.${NC}"
+        exit 0
+    fi
+fi
 
-case $OS in
-    fedora)
-        echo -e "${GREEN}Configuring for Fedora...${NC}"
-        SCRIPTS=(
-            "fedora/dnf.sh"
-            "common/zsh.sh"
-            "common/node_java.sh"
-            "fedora/flatpak_and_service.sh"
-        )
-        ;;
-    pop)
-        echo -e "${GREEN}Configuring for Pop!_OS...${NC}"
-        SCRIPTS=(
-            "popos/apt.sh"
-            "common/zsh.sh"
-            "common/node_java.sh"
-            "popos/flatpak_and_service.sh"
-        )
-        ;;
-    ubuntu)
-        echo -e "${GREEN}Configuring for Ubuntu...${NC}"
-        SCRIPTS=(
-            "ubuntu/apt.sh"
-            "common/zsh.sh"
-            "common/node_java.sh"
-            "ubuntu/flatpak_and_service.sh"
-        )
-        ;;
-    *)
-        echo -e "${RED}Unsupported OS: ${OS}${NC}"
-        echo "This script supports Fedora, Ubuntu, and Pop!_OS"
-        exit 1
-        ;;
-esac
+# Scripts to run
+SCRIPTS=(
+    "popos/apt.sh"
+    "common/zsh.sh"
+    "common/node_java.sh"
+    "popos/flatpak_and_service.sh"
+)
 
 # Download all scripts first
 echo -e "${YELLOW}Downloading scripts...${NC}"
@@ -234,6 +219,11 @@ download_script "common/like_manjaro_zsh.sh" "${TEMP_DIR}/like_manjaro_zsh.sh" |
     echo -e "${RED}Failed to download like_manjaro_zsh.sh${NC}"
     exit 1
 }
+
+# Download dell-oem-drivers.sh if exists (optional)
+if download_script "popos/dell-oem-drivers.sh" "${TEMP_DIR}/dell-oem-drivers.sh" 2>/dev/null; then
+    DOWNLOADED_SCRIPTS+=("${TEMP_DIR}/dell-oem-drivers.sh")
+fi
 
 echo ""
 echo -e "${GREEN}All scripts downloaded successfully!${NC}"
