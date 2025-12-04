@@ -18,6 +18,60 @@ curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/maste
 
 **Note:** The script will detect your OS automatically and run the appropriate configuration scripts.
 
+## Installation Modes
+
+The installer supports three different modes to suit your preferences:
+
+### Default Mode (Standard)
+
+Asks for confirmation once at the beginning, then executes all scripts automatically.
+
+```bash
+# Via curl (remote installation)
+curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/master/start-configure.sh | bash -
+
+# Or locally
+./start-configure.sh
+```
+
+### Interactive Mode (Recommended for first-time users)
+
+**Asks before each script** - gives you full control over what gets installed. Perfect for understanding exactly what's happening on your system.
+
+```bash
+# Via curl
+curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/master/start-configure.sh | bash -s -- -i
+
+# Or locally
+./start-configure.sh -i
+./start-configure.sh --interactive
+```
+
+**What you'll see:**
+
+- Description of what each script does
+- Option to run or skip each step
+- Summary of completed/failed scripts at the end
+
+### Silent Mode (For automation)
+
+Runs everything without prompts - useful for automated deployments or if you trust the configuration completely.
+
+```bash
+# Via curl
+curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/master/start-configure.sh | bash -s -- -y
+
+# Or locally
+./start-configure.sh -y
+./start-configure.sh --yes
+```
+
+### Getting Help
+
+```bash
+./start-configure.sh --help
+```
+
 ## What Gets Installed
 
 ### Package Managers & Development Tools
