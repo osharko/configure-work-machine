@@ -131,6 +131,9 @@ get_script_description() {
         dell-oem-drivers.sh)
             echo "Install Dell OEM hardware drivers (audio, fingerprint, firmware)"
             ;;
+        finalize.sh)
+            echo "Finalize configuration: verify installations, configure environment, and set Zsh as default shell"
+            ;;
         *)
             echo "Execute $script_name"
             ;;
@@ -199,6 +202,7 @@ SCRIPTS=(
     "common/zsh.sh"
     "common/node_java.sh"
     "popos/flatpak_and_service.sh"
+    "common/finalize.sh"
 )
 
 # Download all scripts first

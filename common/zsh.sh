@@ -21,19 +21,6 @@ else
     echo "Skipping Manjaro Zsh configuration..."
 fi
 
-# Set Zsh as default shell
-echo ""
-echo "Setting Zsh as default shell..."
-current_shell=$(getent passwd "$USER" | cut -d: -f7)
-zsh_path=$(which zsh)
-
-if [ "$current_shell" != "$zsh_path" ]; then
-    sudo usermod --shell "$zsh_path" "$USER"
-    echo "✓ Zsh set as default shell (will take effect after logout)"
-else
-    echo "✓ Zsh is already the default shell"
-fi
-
 # Install Homebrew
 echo ""
 if command -v brew &> /dev/null; then
@@ -71,7 +58,7 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 echo ""
 echo "Installing development tools via Homebrew..."
 brew_packages=(
-    "neofetch"
+    "fastfetch"
     "virt-manager"
     "libvirt"
     "qemu"
@@ -96,9 +83,10 @@ done
 echo ""
 echo "=== Zsh and Homebrew setup complete! ==="
 echo ""
-echo "Next steps:"
-echo "  1. Log out and log back in to use Zsh as your default shell"
-echo "  2. Run node_java.sh to install Node.js and Java"
-echo "  3. Run 'p10k configure' to customize your Zsh prompt"
+echo "Installed:"
+echo "  ✓ Zsh with Powerlevel10k theme"
+echo "  ✓ Homebrew and development tools"
+echo "  ✓ Modern CLI tools (lazygit, lazydocker, eza, zoxide, etc.)"
 echo ""
-echo "Note: Homebrew tools are now available. Run 'brew --version' to verify."
+echo "Note: The default shell has NOT been changed yet."
+echo "      This will be done at the end of the installation."

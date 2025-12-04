@@ -112,7 +112,7 @@ curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/maste
 
 - **btop** - Beautiful terminal resource monitor
 - **htop** - Interactive process viewer
-- **neofetch** - System information tool
+- **fastfetch** - System information tool
 - **ncdu** - Disk usage analyzer
 
 #### File & Text Operations

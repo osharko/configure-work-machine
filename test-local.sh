@@ -24,6 +24,7 @@ show_help() {
     echo "  3. node-java       - Test Node.js and Java installation"
     echo "  4. flatpak         - Test Flatpak apps and services"
     echo "  5. dell            - Test Dell OEM drivers (if present)"
+    echo "  6. finalize        - Test finalization (environment setup, shell change)"
     echo "  all                - Run all scripts in order"
     echo ""
     echo "Examples:"
@@ -119,6 +120,11 @@ case $SCRIPT_TO_RUN in
             echo -e "${YELLOW}Dell OEM drivers script not found${NC}"
         fi
         ;;
+    finalize|final|6)
+        cd "$SCRIPT_DIR/common"
+        run_script "finalize.sh" "$SCRIPT_DIR/common/finalize.sh" \
+            "Finalize configuration and set Zsh as default shell"
+        ;;
     all)
         echo -e "${GREEN}Running all scripts in order...${NC}"
         echo ""
@@ -143,6 +149,10 @@ case $SCRIPT_TO_RUN in
             run_script "dell-oem-drivers.sh" "$SCRIPT_DIR/popos/dell-oem-drivers.sh" \
                 "Install Dell OEM hardware drivers" || FAILED=$((FAILED+1))
         fi
+
+        cd "$SCRIPT_DIR/common"
+        run_script "finalize.sh" "$SCRIPT_DIR/common/finalize.sh" \
+            "Finalize configuration and set Zsh as default shell" || FAILED=$((FAILED+1))
 
         echo ""
         echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
