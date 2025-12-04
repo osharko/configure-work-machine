@@ -99,22 +99,26 @@ download_font() {
     local retries=3
     local timeout=30
 
-    # Try wget first (with explicit output file to prevent wget-log creation)
+    # Try curl first (preferred - doesn't create log files)
     for i in $(seq 1 $retries); do
-        if wget --timeout=$timeout --tries=1 --no-verbose --output-document="$output" "$url" >/dev/null 2>&1; then
+        if curl -L --max-time $timeout -s -S -f "$url" -o "$output" 2>/dev/null; then
             return 0
         fi
         [ $i -lt $retries ] && sleep 2
     done
 
-    # Fallback to curl if wget fails
+    # Fallback to wget if curl fails
     for i in $(seq 1 $retries); do
-        if curl -L --max-time $timeout -s -f "$url" -o "$output" 2>/dev/null; then
+        if wget --timeout=$timeout --tries=1 --quiet --output-document="$output" "$url" 2>/dev/null; then
             return 0
         fi
+        # Clean up any wget log files that might have been created
+        rm -f wget-log wget-log.* 2>/dev/null
         [ $i -lt $retries ] && sleep 2
     done
 
+    # Final cleanup
+    rm -f wget-log wget-log.* 2>/dev/null
     return 1
 }
 
