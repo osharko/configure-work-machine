@@ -5,14 +5,10 @@ set -e
 echo "=== Installing packages for Pop!_OS ==="
 echo ""
 
-# Remove LibreOffice (if user wants)
-read -p "Do you want to remove LibreOffice? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Removing LibreOffice packages..."
-    sudo apt remove --purge libreoffice-* -y || true
-    sudo apt autoremove -y
-fi
+# Remove LibreOffice
+echo "Removing LibreOffice packages..."
+sudo apt remove --purge libreoffice-* -y || true
+sudo apt autoremove -y
 
 # Update system first
 echo ""

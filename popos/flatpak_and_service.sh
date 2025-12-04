@@ -30,19 +30,6 @@ if command -v sshd &> /dev/null || [ -f /usr/sbin/sshd ]; then
     echo "✓ SSH daemon enabled"
 fi
 
-# System76 Power Management (Pop!_OS specific)
-if command -v system76-power &> /dev/null; then
-    echo ""
-    echo "Configuring System76 Power Management..."
-    sudo systemctl enable --now system76-power
-    # Set graphics mode (for systems with hybrid graphics)
-    if system76-power graphics 2>/dev/null; then
-        echo "  Current graphics mode: $(system76-power graphics)"
-        echo "  Use 'system76-power graphics [intel|nvidia|hybrid|compute]' to change"
-    fi
-    echo "✓ System76 Power Management configured"
-fi
-
 # Ensure Flatpak is installed (should be by default on Pop!_OS)
 echo ""
 if ! command -v flatpak &> /dev/null; then
@@ -65,12 +52,8 @@ applications=(
     "com.thincast.client"               # ThinCast client
     "com.system76.Popsicle"             # USB flasher (Pop!_OS tool)
     "io.dbeaver.DBeaverCommunity"       # Database management
-    "io.beekeeperstudio.Studio"         # Database GUI
     "com.usebottles.bottles"            # Bottles (Windows app compatibility - modern Wine wrapper)
     "com.spotify.Client"                # Spotify (optional but nice to have)
-    "org.gimp.GIMP"                     # GIMP (image editor)
-    "org.inkscape.Inkscape"             # Inkscape (vector graphics)
-    "com.discordapp.Discord"            # Discord
     "com.github.tchx84.Flatseal"        # Flatseal (manage Flatpak permissions)
     "io.podman_desktop.PodmanDesktop"   # Podman Desktop (Docker alternative)
 )
