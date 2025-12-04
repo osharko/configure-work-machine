@@ -122,7 +122,8 @@ sudo apt install -y \
     dconf-editor \
     btop \
     ncdu \
-    tree
+    tree \
+    pavucontrol
 
 # Install Pop!_OS specific packages (if not already installed)
 echo ""

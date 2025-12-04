@@ -145,17 +145,72 @@ update_firmware() {
     echo "✓ Firmware updated"
 }
 
+# Install AMD Rembrandt audio drivers
+install_amd_audio_drivers() {
+    echo ""
+    echo "Checking for AMD Rembrandt audio hardware..."
+
+    # Check if this is AMD Rembrandt (Ryzen 6000 series)
+    if lspci | grep -iq "Rembrandt.*Audio"; then
+        echo "  ✓ Detected AMD Rembrandt audio hardware"
+        echo ""
+        echo "Installing AMD Rembrandt audio drivers..."
+
+        # Install SOF firmware and updated ALSA UCM configurations
+        sudo apt install -y \
+            sof-firmware \
+            alsa-ucm-conf \
+            alsa-topology-conf \
+            alsa-utils \
+            pipewire \
+            pipewire-audio-client-libraries \
+            wireplumber || true
+
+        echo "  ✓ Audio packages installed"
+
+        # Check kernel version (need 6.0+ for Rembrandt)
+        KERNEL_VERSION=$(uname -r | cut -d. -f1)
+        if [ "$KERNEL_VERSION" -lt 6 ]; then
+            echo ""
+            echo "  ⚠ WARNING: Your kernel is older than 6.0"
+            echo "    AMD Rembrandt audio support requires kernel 6.0 or newer"
+            echo "    Consider upgrading: sudo apt install linux-generic-hwe-24.04"
+        else
+            echo "  ✓ Kernel version OK for Rembrandt audio"
+        fi
+
+        # Reload ALSA and PipeWire
+        echo ""
+        echo "Reloading audio services..."
+        sudo alsa force-reload 2>/dev/null || true
+        systemctl --user restart pipewire pipewire-pulse wireplumber 2>/dev/null || true
+
+        echo "  ✓ Audio services reloaded"
+        echo ""
+        echo "  NOTE: If audio still doesn't work after reboot, try:"
+        echo "    1. Open PipeWire Volume Control (pavucontrol)"
+        echo "    2. Go to 'Configuration' tab"
+        echo "    3. Select 'Pro Audio' profile for Rembrandt device"
+        echo "    4. Then switch back to 'Analog Stereo Output'"
+        echo "    5. Or use: wpctl set-default <sink-id>"
+
+    else
+        echo "  AMD Rembrandt audio not detected, skipping specialized drivers"
+    fi
+}
+
 # Verify audio hardware
 verify_audio() {
     echo ""
     echo "Verifying audio hardware..."
 
-    # Check for AMD SoundWire audio
+    # Check for AMD audio
     if lspci | grep -iq "audio.*amd"; then
         echo "  Detected AMD audio hardware"
+        lspci | grep -i "audio.*amd"
 
         # Verify SoundWire modules are loaded
-        if lsmod | grep -q "soundwire_amd"; then
+        if lsmod | grep -q "soundwire"; then
             echo "  ✓ SoundWire modules loaded"
         else
             echo "  ⚠ SoundWire modules not loaded (will load after reboot)"
@@ -163,12 +218,15 @@ verify_audio() {
     fi
 
     # Check audio devices
-    if command -v pactl &> /dev/null; then
+    echo ""
+    if command -v wpctl &> /dev/null; then
+        echo "  PipeWire audio system detected"
+        echo "  Available audio sinks:"
+        wpctl status | grep -A 20 "Audio" | grep -E "^\s+[0-9]+\." || echo "    (none found)"
+    elif command -v pactl &> /dev/null; then
         AUDIO_DEVICES=$(pactl list sinks short 2>/dev/null | wc -l)
         echo "  Found $AUDIO_DEVICES audio output device(s)"
-    elif command -v wpctl &> /dev/null; then
-        AUDIO_DEVICES=$(wpctl status | grep -c "Sinks:" || echo "0")
-        echo "  PipeWire audio system detected"
+        pactl list sinks short 2>/dev/null || true
     fi
 }
 
@@ -181,6 +239,7 @@ if find_oem_package; then
 fi
 
 install_fingerprint_drivers
+install_amd_audio_drivers
 update_firmware
 verify_audio
 
@@ -192,13 +251,23 @@ echo ""
 echo "Installed components:"
 echo "  ✓ Dell OEM hardware support package"
 echo "  ✓ Fingerprint reader drivers (if detected)"
+echo "  ✓ AMD Rembrandt audio drivers (if detected)"
+echo "  ✓ SOF firmware and ALSA UCM configurations"
 echo "  ✓ Updated system firmware"
 echo "  ✓ Audio drivers verified"
 echo ""
 echo "⚠ IMPORTANT: You must REBOOT your system for all changes to take effect!"
 echo ""
 echo "After reboot, verify functionality:"
-echo "  • Audio: wpctl status && speaker-test -t wav -c 2 -l 1"
+echo "  • Audio devices: wpctl status"
+echo "  • Test speakers: speaker-test -t wav -c 2 -l 1"
+echo "  • Set default sink: wpctl set-default <sink-id>"
+echo "  • Volume control GUI: pavucontrol"
 echo "  • Fingerprint: fprintd-list $USER"
 echo "  • If fingerprint works, enroll: fprintd-enroll"
+echo ""
+echo "Troubleshooting audio:"
+echo "  • If multiple phantom outputs appear, use pavucontrol to select the"
+echo "    correct profile (Configuration tab → Select 'Analog Stereo Output')"
+echo "  • Check kernel version: uname -r (need 6.0+ for Rembrandt audio)"
 echo ""

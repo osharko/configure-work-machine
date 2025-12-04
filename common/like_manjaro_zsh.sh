@@ -92,13 +92,48 @@ fonts=(
     "MesloLGS%20NF%20Bold%20Italic.ttf:BoldItalic.ttf"
 )
 
+# Function to download font with retry logic and fallback
+download_font() {
+    local url=$1
+    local output=$2
+    local retries=3
+    local timeout=30
+
+    # Try wget first
+    for i in $(seq 1 $retries); do
+        if wget --timeout=$timeout --tries=1 -q "$url" -O "$output" 2>/dev/null; then
+            return 0
+        fi
+        [ $i -lt $retries ] && sleep 2
+    done
+
+    # Fallback to curl if wget fails
+    for i in $(seq 1 $retries); do
+        if curl -L --max-time $timeout -s -f "$url" -o "$output" 2>/dev/null; then
+            return 0
+        fi
+        [ $i -lt $retries ] && sleep 2
+    done
+
+    return 1
+}
+
+# Download fonts with better error handling
+# Temporarily disable 'set -e' for font downloads to prevent crashes
+set +e
 for font in "${fonts[@]}"; do
     IFS=':' read -r url_name file_name <<< "$font"
     echo "  Downloading $file_name..."
-    wget -q "https://github.com/romkatv/powerlevel10k-media/raw/master/$url_name" -O "$FONTS_DEST/$file_name" || {
-        echo "  Warning: Failed to download $file_name, continuing..."
-    }
+
+    url="https://github.com/romkatv/powerlevel10k-media/raw/master/$url_name"
+    if download_font "$url" "$FONTS_DEST/$file_name"; then
+        echo "    ✓ Downloaded $file_name"
+    else
+        echo "    ✗ Failed to download $file_name after multiple attempts"
+        echo "      You can download it manually from: $url"
+    fi
 done
+set -e
 
 echo ""
 echo "Refreshing font cache..."
