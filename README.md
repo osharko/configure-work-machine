@@ -190,6 +190,33 @@ When running on Pop!_OS, additional optimizations are applied:
 - **Pop!_Shop** - Integrated Flatpak and package management
 - Hybrid graphics support (Intel/NVIDIA switching)
 
+#### Dell OEM Hardware Support
+
+For Dell systems (automatically detected), the script can install OEM-specific drivers:
+
+- **Dell OEM packages** - Model-specific hardware support
+- **Audio drivers** - SoundWire, Realtek codec support (RT722, RT1320)
+- **Fingerprint drivers** - Broadcom fingerprint reader support
+- **Firmware updates** - Latest hardware firmware
+
+To manually install Dell OEM drivers:
+
+```bash
+# If you've cloned the repository
+./popos/dell-oem-drivers.sh
+
+# Or run directly without cloning (quick install)
+curl -sfL https://raw.githubusercontent.com/osharko/configure-work-machine/develop/install-dell-drivers.sh | bash -
+```
+
+Supported Dell models include:
+- Dell Pro Max 14/16 (MC14255, MC16255, PC14255, PC16255)
+- Dell Pro Max Slim (FCS1250)
+- Dell Pro Max Tower (FCT2250)
+- Dell Latitude 7340
+- Dell Pro Rugged 13/14 (RA13250, RB14250)
+- And more (auto-detected)
+
 #### Pop!_Shell Keyboard Shortcuts
 
 - `Super + Y` - Toggle tiling mode
@@ -225,6 +252,7 @@ chmod +x start-configure.sh
 │   └── flatpak_and_service.sh # Fedora services configuration
 ├── popos/
 │   ├── apt.sh                 # Pop!_OS optimized package installation
+│   ├── dell-oem-drivers.sh    # Dell OEM hardware drivers (audio, fingerprint, firmware)
 │   └── flatpak_and_service.sh # Pop!_OS services & Pop!_Shop apps
 ├── ubuntu/
 │   ├── apt.sh                 # Ubuntu package installation
