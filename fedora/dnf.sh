@@ -7,6 +7,8 @@ echo ""
 
 # Remove LibreOffice
 echo "Removing LibreOffice packages..."
+sudo dnf remove -y libreoffice-* || true
+sudo dnf autoremove -y
 
 # Update system first
 echo ""
@@ -40,8 +42,8 @@ if ! command -v docker &> /dev/null; then
     echo ""
     echo "Installing Docker..."
     sudo dnf -y install dnf-plugins-core
-    sudo dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-    sudo dnf install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     echo "✓ Docker installed"
 else
     echo "Docker already installed"
@@ -51,10 +53,10 @@ fi
 if ! command -v code &> /dev/null; then
     echo ""
     echo "Installing Visual Studio Code..."
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc &&
+    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
     echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
-    dnf check-update -y
-    sudo dnf install code -y
+    sudo dnf check-update || true
+    sudo dnf install -y code
     echo "✓ VS Code installed"
 else
     echo "VS Code already installed"
@@ -65,20 +67,27 @@ echo ""
 echo "Installing development tools..."
 sudo dnf install -y \
     zsh \
-    golang-go \
+    golang \
     gcc \
+    gcc-c++ \
     make \
+    cmake \
+    automake \
     net-tools \
-    ssh \
+    openssh \
     openssh-server \
+    vim \
+    neovim \
+    gnupg2 \
+    ca-certificates \
     obs-studio \
+    gnome-tweaks \
     dconf-editor \
     btop \
     ncdu \
     tree
 
-
-# Modern CLI tools via apt (where available)
+# Modern CLI tools via dnf
 echo ""
 echo "Installing modern CLI tools..."
 sudo dnf install -y \
@@ -111,12 +120,12 @@ if [ -f ~/.zshrc ] && ! grep -q '$HOME/.local/bin' ~/.zshrc; then
 fi
 
 echo ""
-echo "=== Pop!_OS package installation complete! ==="
+echo "=== Fedora package installation complete! ==="
 echo ""
 echo "Installed tools:"
 echo "  ✓ Brave Browser, Sublime Text, VS Code"
 echo "  ✓ Docker & Docker Compose"
-echo "  ✓ Development tools (git, gcc, make, go)"
+echo "  ✓ Development tools (git, gcc, make, go, cmake)"
 echo "  ✓ Modern CLI tools (bat, fd, ripgrep, fzf, btop)"
 echo "  ✓ Pop!_Shell (tiling window manager)"
 echo "  ✓ System76 Power Management"
@@ -124,4 +133,4 @@ echo ""
 echo "Next steps:"
 echo "  - Run flatpak_and_service.sh to configure services and install apps"
 echo "  - Run ../common/zsh.sh to set up your shell environment"
-echo "  - Press Super+Y to toggle Pop!_Shell tiling mode"
+echo "  - If using COSMIC: familiarize with tiling shortcuts"

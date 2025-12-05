@@ -25,7 +25,7 @@ SILENT_MODE=false
 
 # Parse command-line arguments
 show_help() {
-    echo "Pop!_OS Machine Configuration Script"
+    echo "Linux Machine Configuration Script (Pop!_OS / Fedora)"
     echo ""
     echo "Usage: $0 [OPTIONS]"
     echo ""
@@ -38,6 +38,10 @@ show_help() {
     echo "  Default mode:      Ask once at the beginning, then run all scripts"
     echo "  Interactive mode:  Ask before each script execution"
     echo "  Silent mode:       Run everything without prompts (for automation)"
+    echo ""
+    echo "Supported distributions:"
+    echo "  - Pop!_OS (System76)"
+    echo "  - Fedora (including COSMIC desktop)"
     echo ""
     echo "Examples:"
     echo "  $0                    # Default mode"
@@ -72,7 +76,7 @@ done
 export INTERACTIVE_MODE
 export SILENT_MODE
 
-echo -e "${GREEN}=== Pop!_OS Machine Configuration Script ===${NC}"
+echo -e "${GREEN}=== Linux Machine Configuration Script ===${NC}"
 echo ""
 
 if [ "$INTERACTIVE_MODE" = true ]; then
@@ -117,22 +121,28 @@ get_script_description() {
     local script_name=$1
     case $script_name in
         apt.sh)
-            echo "Install system packages, development tools, and modern CLI tools"
+            echo "Install Pop!_OS system packages, development tools, and modern CLI tools (Brave, Docker, VS Code, etc.)"
+            ;;
+        dnf.sh)
+            echo "Install Fedora system packages, development tools, and modern CLI tools (Brave, Docker, VS Code, etc.)"
             ;;
         zsh.sh)
             echo "Set up Zsh shell with Powerlevel10k theme and install Homebrew + CLI tools (lazygit, lazydocker, eza, zoxide, bat, etc.)"
             ;;
-        node_java.sh)
-            echo "Install Node.js (via nvm) and Java (Amazon Corretto 8 & 21 via jenv)"
+        node.sh)
+            echo "Install Node.js LTS (v20 & v22) via nvm with global packages (yarn, pnpm, nodemon, etc.)"
+            ;;
+        java.sh)
+            echo "Install Java development environment: JDK 8 & 21 (via jenv), Maven 3.9.9, Gradle 8.11.1 in /opt/jdks"
             ;;
         flatpak_and_service.sh)
-            echo "Configure system services (Docker, SSH, System76 Power) and install Flatpak applications (Bottles, Telegram, Discord, etc.)"
+            echo "Configure system services (Docker, SSH, libvirt) and install Flatpak applications (Bottles, Telegram, Discord, etc.)"
             ;;
         dell-oem-drivers.sh)
             echo "Install Dell OEM hardware drivers (audio, fingerprint, firmware)"
             ;;
         finalize.sh)
-            echo "Finalize configuration: verify installations, configure environment, and set Zsh as default shell"
+            echo "Finalize configuration: verify installations, configure terminal font, set environment variables, and change default shell to Zsh"
             ;;
         *)
             echo "Execute $script_name"
@@ -183,25 +193,55 @@ detect_os
 echo -e "Detected OS: ${GREEN}${OS} ${VERSION}${NC}"
 echo ""
 
-# Check if Pop!_OS
-if [ "$OS" != "pop" ]; then
-    echo -e "${YELLOW}Warning: This script is optimized for Pop!_OS${NC}"
+# Check if supported OS
+DISTRO_DIR=""
+if [ "$OS" = "pop" ]; then
+    DISTRO_DIR="popos"
+    echo -e "${GREEN}✓ Pop!_OS detected - using Pop!_OS scripts${NC}"
+elif [ "$OS" = "fedora" ]; then
+    DISTRO_DIR="fedora"
+    echo -e "${GREEN}✓ Fedora detected - using Fedora scripts${NC}"
+else
+    echo -e "${YELLOW}Warning: This script is optimized for Pop!_OS and Fedora${NC}"
     echo -e "Detected: $OS"
     echo ""
-    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo -e "Choose installation profile:"
+    echo "  1) Pop!_OS/Ubuntu-based"
+    echo "  2) Fedora-based"
+    echo "  3) Cancel"
+    read -p "Select (1-3): " -n 1 -r
     echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}Installation cancelled.${NC}"
-        exit 0
-    fi
+    case $REPLY in
+        1)
+            DISTRO_DIR="popos"
+            echo -e "${YELLOW}Using Pop!_OS scripts${NC}"
+            ;;
+        2)
+            DISTRO_DIR="fedora"
+            echo -e "${YELLOW}Using Fedora scripts${NC}"
+            ;;
+        *)
+            echo -e "${YELLOW}Installation cancelled.${NC}"
+            exit 0
+            ;;
+    esac
 fi
 
-# Scripts to run
+echo ""
+
+# Scripts to run (distro-specific first script determined by detection)
+if [ "$DISTRO_DIR" = "popos" ]; then
+    PACKAGE_MANAGER_SCRIPT="${DISTRO_DIR}/apt.sh"
+elif [ "$DISTRO_DIR" = "fedora" ]; then
+    PACKAGE_MANAGER_SCRIPT="${DISTRO_DIR}/dnf.sh"
+fi
+
 SCRIPTS=(
-    "popos/apt.sh"
+    "$PACKAGE_MANAGER_SCRIPT"
     "common/zsh.sh"
-    "common/node_java.sh"
-    "popos/flatpak_and_service.sh"
+    "common/node.sh"
+    "common/java.sh"
+    "${DISTRO_DIR}/flatpak_and_service.sh"
     "common/finalize.sh"
 )
 
@@ -224,9 +264,11 @@ download_script "common/like_manjaro_zsh.sh" "${TEMP_DIR}/like_manjaro_zsh.sh" |
     exit 1
 }
 
-# Download dell-oem-drivers.sh if exists (optional)
-if download_script "popos/dell-oem-drivers.sh" "${TEMP_DIR}/dell-oem-drivers.sh" 2>/dev/null; then
-    DOWNLOADED_SCRIPTS+=("${TEMP_DIR}/dell-oem-drivers.sh")
+# Download dell-oem-drivers.sh if exists (optional, only for Pop!_OS)
+if [ "$DISTRO_DIR" = "popos" ]; then
+    if download_script "popos/dell-oem-drivers.sh" "${TEMP_DIR}/dell-oem-drivers.sh" 2>/dev/null; then
+        DOWNLOADED_SCRIPTS+=("${TEMP_DIR}/dell-oem-drivers.sh")
+    fi
 fi
 
 echo ""

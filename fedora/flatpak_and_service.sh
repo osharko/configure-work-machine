@@ -30,18 +30,24 @@ if command -v sshd &> /dev/null || [ -f /usr/sbin/sshd ]; then
     echo "✓ SSH daemon enabled"
 fi
 
-# Ensure Flatpak is installed (should be by default on Pop!_OS)
+# Ensure Flatpak is installed (should be by default on Fedora)
 echo ""
 if ! command -v flatpak &> /dev/null; then
     echo "Installing Flatpak..."
-    sudo apt install -y flatpak
+    sudo dnf install -y flatpak
 else
     echo "Flatpak already installed"
 fi
 
+# Add Flathub repository if not already added
+if ! flatpak remotes | grep -q "flathub"; then
+    echo "Adding Flathub repository..."
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+fi
+
 # Install Flatpak applications
 echo ""
-echo "Installing Flatpak applications via Pop!_Shop/Flathub..."
+echo "Installing Flatpak applications via Flathub..."
 
 applications=(
     "org.telegram.desktop"              # Telegram Desktop
@@ -81,16 +87,6 @@ else
     echo "Skipping application installation"
 fi
 
-# Configure Pop!_Shell settings (if installed)
-if command -v gnome-extensions &> /dev/null; then
-    if gnome-extensions list | grep -q "pop-shell"; then
-        echo ""
-        echo "Enabling Pop!_Shell..."
-        gnome-extensions enable pop-shell@system76.com || true
-        echo "✓ Pop!_Shell enabled (Press Super+Y to toggle tiling)"
-    fi
-fi
-
 echo ""
 echo "=== Configuration complete! ==="
 echo ""
@@ -98,20 +94,21 @@ echo "Important notes:"
 echo "  - Log out and log back in for group changes (docker, libvirt) to take effect"
 echo "  - Bottles is installed for running Windows applications"
 echo "  - Flatseal is installed to manage Flatpak app permissions"
-echo "  - Pop!_Shell tiling: Press Super+Y to toggle"
 echo ""
-echo "Useful Pop!_OS keyboard shortcuts:"
-echo "  Super+Y          - Toggle tiling mode"
-echo "  Super+O          - Change window orientation"
-echo "  Super+G          - Float focused window"
-echo "  Super+Arrow      - Move focus between windows"
-echo "  Super+Enter      - Adjust window size"
-echo "  Super+M          - Maximize window"
-echo ""
-echo "To manage graphics on hybrid systems:"
-echo "  system76-power graphics [intel|nvidia|hybrid|compute]"
+echo "Installed Flatpak applications:"
+echo "  ✓ Telegram, Discord, Spotify"
+echo "  ✓ DBeaver, Beekeeper Studio (databases)"
+echo "  ✓ GIMP, Inkscape (graphics)"
+echo "  ✓ Bottles (Windows compatibility)"
+echo "  ✓ Podman Desktop"
 echo ""
 echo "To verify services:"
 echo "  sudo systemctl status docker"
 echo "  sudo systemctl status libvirtd"
-echo "  sudo systemctl status system76-power"
+echo "  sudo systemctl status sshd"
+echo ""
+echo "Useful COSMIC desktop shortcuts (if using COSMIC):"
+echo "  Super+/          - Show all keyboard shortcuts"
+echo "  Super+T          - Open terminal"
+echo "  Super+Arrow      - Tile windows"
+echo "  Super+M          - Maximize window"
