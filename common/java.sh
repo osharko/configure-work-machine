@@ -60,18 +60,24 @@ install_jdk() {
     local url=$2
     local jdk_dir="$JDKS_DIR/jdk-$version"
 
-    if [ -d "$jdk_dir" ]; then
+    if [ -d "$jdk_dir" ] && [ -f "$jdk_dir/bin/java" ]; then
         echo "  JDK $version already installed at $jdk_dir, skipping..."
         # Ensure it's added to jenv
         jenv add "$jdk_dir" 2>/dev/null || echo "  JDK $version already in jenv"
         return 0
     fi
 
+    # Clean up any incomplete installation
+    if [ -d "$jdk_dir" ]; then
+        echo "  Removing incomplete installation at $jdk_dir..."
+        rm -rf "$jdk_dir"
+    fi
+
     echo "  Installing Amazon Corretto JDK $version..."
     mkdir -p "$jdk_dir"
 
     # Download with progress and extract
-    if wget --show-progress -q -O - "$url" | tar -xz --strip-components=1 -C "$jdk_dir"; then
+    if wget --max-redirect=5 --show-progress -q -O - "$url" | tar -xz --strip-components=1 -C "$jdk_dir"; then
         echo "  ✓ JDK $version extracted to $jdk_dir"
 
         # Add to jenv
@@ -110,7 +116,7 @@ else
     echo "  Downloading Maven $MAVEN_VERSION..."
     MAVEN_URL="https://dlcdn.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz"
 
-    if wget --show-progress -q -O - "$MAVEN_URL" | tar -xz -C "$JDKS_DIR"; then
+    if wget --max-redirect=5 --show-progress -q -O - "$MAVEN_URL" | tar -xz -C "$JDKS_DIR"; then
         mv "$JDKS_DIR/apache-maven-$MAVEN_VERSION" "$MAVEN_DIR"
         echo "  ✓ Maven installed to $MAVEN_DIR"
     else
@@ -148,7 +154,7 @@ else
     GRADLE_URL="https://services.gradle.org/distributions/gradle-$GRADLE_VERSION-bin.zip"
 
     # Download Gradle
-    if wget --show-progress -q "$GRADLE_URL" -O /tmp/gradle.zip; then
+    if wget --max-redirect=5 --show-progress -q "$GRADLE_URL" -O /tmp/gradle.zip; then
         unzip -q /tmp/gradle.zip -d "$JDKS_DIR"
         mv "$JDKS_DIR/gradle-$GRADLE_VERSION" "$GRADLE_DIR"
         rm /tmp/gradle.zip

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(chmod:*)",
       "Bash(tree:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(wget:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
