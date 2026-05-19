@@ -1,0 +1,10 @@
+[Unit]
+Description=Shutdown docker on shutdown
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStop=/bin/zsh docker ps -q | xargs docker stop
+
+[Install]
+WantedBy=multi-user.target
