@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lazydocker
+GenericName=Docker TUI
+Comment=Terminal UI for docker and docker-compose
+Exec=alacritty -e lazydocker
+Icon=docker
+Terminal=false
+Categories=Development;System;
+Keywords=docker;container;tui;

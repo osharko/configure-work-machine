@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Installa le LTS globali definite in ~/.config/mise/config.toml.
+# Si rilancia ogni volta che il config globale mise cambia.
+#
+# Hash trigger: {{ include "dot_config/mise/config.toml" | sha256sum }}
+
+set -euo pipefail
+
+if ! command -v mise >/dev/null; then
+  echo "mise non installato, salto (verrà installato dal pacman script)"
+  exit 0
+fi
+
+echo "── mise install (toolchain LTS globali) ──"
+
+# `mise install` legge il config attivo (~/.config/mise/config.toml + ereditati)
+# e installa quanto definito sotto [tools]. Idempotente.
+# Tolerance: se UN tool fallisce (es. registry aqua bugged per quella versione)
+# non vogliamo che tutto l'apply chezmoi si fermi. Continua, log warning.
+mise install 2>&1 || echo "⚠  mise install: alcuni tool potrebbero non essere installati (vedi sopra). Continuo."
+
+# Aggiorna gli shim (in $HOME/.local/share/mise/shims) per nuovi binari
+mise reshim
+
+# PEP517 build deps nel python di mise (necessari quando paru/makepkg builda
+# pacchetti AUR Python: il python di mise è first in PATH e i PKGBUILD fanno
+# `python -m build`). Senza questi, build AUR Python fallisce con "No module
+# named build". Idempotente: pip --upgrade non rompe nulla.
+if mise current python >/dev/null 2>&1; then
+    mise exec python -- pip install --quiet --upgrade build installer wheel setuptools 2>/dev/null \
+        && echo "✓ build deps installate nel python di mise"
+fi
+
+echo "✓ mise install completo"
+mise list

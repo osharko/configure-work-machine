@@ -1,0 +1,50 @@
+# Configurazione mise globale (fuori dai workspace).
+# I progetti con `.mise.toml` proprio fanno override automatico di queste versioni.
+
+[settings]
+experimental = true
+# Auto-trust dei .mise.toml in queste root (niente prompt ad ogni cd)
+trusted_config_paths = [
+  "~/Documents/Code",
+]
+# `mise use` aggiorna il config invece di chiedere conferma
+yes = true
+# Compila/installa silenzioso quando possibile
+quiet = false
+
+# ─── Toolchain globali (LTS dinamici, no versioni fissate) ────────────────
+# Tutto via alias mise che traccia l'ultimo LTS/stable al momento del
+# `mise install`. I progetti specifici hanno il loro .mise.toml che fa
+# override (es. java=temurin-21 pinnato in un workspace).
+[tools]
+# JVM (Java ha LTS ogni 2 anni: 21 attuale fino 2031; 25 prossimo)
+java   = "lts"            # alias temurin: ultimo LTS Eclipse Temurin
+maven  = "latest"
+gradle = "latest"
+
+# JS/TS (Node "lts" alias punta sempre all'Active LTS corrente)
+node = "lts"
+bun  = "latest"
+# pnpm: gestito via Corepack (built-in in Node.js).
+# Per attivarlo: `corepack enable pnpm` (o auto-attivato se package.json ha
+# "packageManager": "pnpm@..."). Niente dipendenza dal registry mise/aqua
+# che ha avuto bug con asset naming sulle release recenti pnpm.
+
+# Go (no LTS, ciclo 6 mesi: latest = ultima stabile)
+go = "latest"
+
+# Python (no LTS formale; latest = ultima stabile)
+python = "latest"
+
+# Rust (canale stable = sempre l'ultima stabile, aggiornato ogni 6 settimane)
+rust = "stable"
+
+# Ruby / .NET — non installati di default (decommentali se servono)
+# ruby   = "lts"
+# dotnet = "lts"
+
+# ─── Tool extra installabili da mise (no-pacman) ──────────────────────────
+# mise può anche installare CLI tools tramite plugin asdf:
+# usage = "latest"          # per autocompletion mise
+# uv = "latest"             # python package manager rapido
+# tofu = "latest"           # opentofu (terraform fork)

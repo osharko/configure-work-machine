@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# Hardware autodetect — installa pacchetti specifici per HW rilevato.
+# Si rilancia se cambia uno qualsiasi degli output di rilevazione hardware.
+#
+# Hash di cambio (chezmoi rilancia se cambia):
+# CPU vendor:   {{ output "sh" "-c" "lscpu | grep -i 'vendor id' | awk '{print $NF}'" | sha256sum }}
+# GPU PCI:      {{ output "sh" "-c" "lspci -nn | grep -iE 'vga|3d|display'"           | sha256sum }}
+# USB devs:     {{ output "sh" "-c" "lsusb"                                            | sha256sum }}
+# TB bus:       {{ output "sh" "-c" "ls /sys/bus/thunderbolt/devices 2>/dev/null"      | sha256sum }}
+# Battery:      {{ output "sh" "-c" "ls /sys/class/power_supply/ 2>/dev/null"          | sha256sum }}
+# UEFI:         {{ output "sh" "-c" "test -d /sys/firmware/efi && echo yes || echo no" | sha256sum }}
+# I2C bus:      {{ output "sh" "-c" "ls /sys/bus/i2c/devices 2>/dev/null"               | sha256sum }}
+# Bluetooth:    {{ output "sh" "-c" "(lsusb 2>/dev/null | grep -i bluetooth; hciconfig 2>/dev/null) || true" | sha256sum }}
+# Wi-Fi PCI:    {{ output "sh" "-c" "lspci -nn | grep -i 'network'"                    | sha256sum }}
+# SecureBoot:   {{ output "sh" "-c" "mokutil --sb-state 2>/dev/null | head -1"          | sha256sum }}
+
+set -euo pipefail
+
+PAC=()
+AUR=()
+SVC=()
+
+echo "── Hardware autodetect ──"
+
+# ─── 1. SEMPRE (laptop moderno) ──────────────────────────────────────────
+PAC+=(linux-firmware sof-firmware fwupd usbutils dmidecode vulkan-tools)
+SVC+=(fwupd)
+
+# ─── 2. CPU microcode ────────────────────────────────────────────────────
+CPU_VENDOR="$(lscpu | awk -F: '/^Vendor ID/{gsub(/^ +/,"",$2); print $2; exit}')"
+case "$CPU_VENDOR" in
+  AuthenticAMD) PAC+=(amd-ucode);   echo "  CPU AMD     → amd-ucode" ;;
+  GenuineIntel) PAC+=(intel-ucode); echo "  CPU Intel   → intel-ucode" ;;
+  *)            echo "  CPU vendor sconosciuto: $CPU_VENDOR" ;;
+esac
+
+# ─── 3. GPU stack ────────────────────────────────────────────────────────
+GPU_LINE="$(lspci -nn | grep -iE 'vga|3d|display' || true)"
+if echo "$GPU_LINE" | grep -qiE 'amd|advanced micro|ati'; then
+  # mesa-vdpau è confluito in libva-mesa-driver dal 2024 (non esiste più come pkg distinto)
+  PAC+=(mesa vulkan-radeon libva-mesa-driver)
+  echo "  GPU AMD     → mesa + vulkan-radeon + VAAPI"
+fi
+if echo "$GPU_LINE" | grep -qi 'intel'; then
+  PAC+=(mesa vulkan-intel intel-media-driver)
+  echo "  GPU Intel   → mesa + vulkan-intel + intel-media-driver"
+fi
+if echo "$GPU_LINE" | grep -qi 'nvidia'; then
+  echo "  ATT: GPU NVIDIA rilevata — driver NON installati automaticamente."
+  echo "       Gestisci a parte (nvidia-open-dkms o equivalente)."
+fi
+
+# ─── 4. Laptop battery → power management ────────────────────────────────
+if ls /sys/class/power_supply/BAT* >/dev/null 2>&1; then
+  PAC+=(power-profiles-daemon)
+  SVC+=(power-profiles-daemon)
+  echo "  Batteria    → power-profiles-daemon"
+fi
+
+# ─── 5. UEFI ─────────────────────────────────────────────────────────────
+if [ -d /sys/firmware/efi ]; then
+  PAC+=(efibootmgr)
+  echo "  UEFI        → efibootmgr"
+fi
+
+# ─── 6. Secure Boot ──────────────────────────────────────────────────────
+if command -v mokutil >/dev/null 2>&1 && mokutil --sb-state 2>/dev/null | grep -qi enabled; then
+  PAC+=(mokutil)
+  echo "  Secure Boot → mokutil"
+fi
+
+# ─── 7. Bluetooth ────────────────────────────────────────────────────────
+if lsusb 2>/dev/null | grep -qi bluetooth || \
+   lspci 2>/dev/null | grep -qi bluetooth || \
+   ls /sys/class/bluetooth >/dev/null 2>&1; then
+  PAC+=(bluez bluez-utils)
+  SVC+=(bluetooth)
+  echo "  Bluetooth   → bluez + bluez-utils"
+fi
+
+# ─── 8. Fingerprint reader ───────────────────────────────────────────────
+FP_LINE="$(lsusb 2>/dev/null | grep -iE 'fingerprint|goodix|synaptics|validity|broadcom|elan|upek|authentec' || true)"
+if [ -n "$FP_LINE" ]; then
+  PAC+=(fprintd)
+  SVC+=(fprintd)
+  echo "  Fingerprint → $FP_LINE"
+  # Broadcom CV3+ (Dell Pro Max 16, alcuni Latitude/Precision recenti).
+  # Device IDs noti: 5832/5840/5843 (CV3) e 5865 (58200, "ControlVault3" nuovi).
+  if echo "$FP_LINE" | grep -qiE 'broadcom|0a5c:5832|0a5c:5840|0a5c:5843|0a5c:5865'; then
+    AUR+=(libfprint-2-tod1-broadcom-cv3plus libfprint-tod)
+    echo "    → driver Broadcom CV3+ (AUR)"
+  fi
+fi
+
+# ─── 9. Thunderbolt ──────────────────────────────────────────────────────
+if [ -d /sys/bus/thunderbolt/devices ] && [ -n "$(ls -A /sys/bus/thunderbolt/devices 2>/dev/null || true)" ]; then
+  PAC+=(bolt)
+  SVC+=(bolt)
+  echo "  Thunderbolt → bolt"
+fi
+
+# ─── 10. I²C bus → DDC/CI per monitor esterni ────────────────────────────
+if ls /sys/bus/i2c/devices/i2c-* >/dev/null 2>&1; then
+  PAC+=(ddcutil)
+  echo "  I²C bus     → ddcutil"
+  # Modulo i2c-dev (caricato a boot tramite modules-load.d)
+  if [ ! -f /etc/modules-load.d/i2c-dev.conf ]; then
+    echo "i2c-dev" | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null
+    sudo modprobe i2c-dev || true
+  fi
+fi
+
+# ─── 11. Wi-Fi backend (iwd se chipset Intel/Qualcomm wifi) ──────────────
+WIFI_LINE="$(lspci -nn | grep -iE 'network controller|wireless' || true)"
+if echo "$WIFI_LINE" | grep -qi 'intel\|qualcomm'; then
+  # NetworkManager va già su iwd come backend se configurato; lo lasciamo opzionale
+  : # nessuna installazione automatica per ora — dipende dalle preferenze utente
+fi
+
+# ─── 12. Installazione (unica chiamata paru: repo+AUR insieme) ───────────
+ALL=("${PAC[@]}" "${AUR[@]}")
+if [ ${#ALL[@]} -gt 0 ]; then
+  AUR_HELPER="$(command -v paru || command -v yay || true)"
+  if [ -n "$AUR_HELPER" ]; then
+    echo "→ $AUR_HELPER: ${ALL[*]}"
+    "$AUR_HELPER" -S --needed --noconfirm --sudoloop "${ALL[@]}"
+  else
+    echo "ATT: nessun AUR helper, fallback pacman per i soli repo"
+    [ ${#PAC[@]} -gt 0 ] && sudo pacman -S --needed --noconfirm "${PAC[@]}"
+    [ ${#AUR[@]} -gt 0 ] && echo "  ⚠ salto AUR (no helper): ${AUR[*]}"
+  fi
+fi
+
+# ─── 13. Servizi ─────────────────────────────────────────────────────────
+for s in "${SVC[@]}"; do
+  if systemctl list-unit-files "$s.service" >/dev/null 2>&1; then
+    sudo systemctl enable --now "$s.service" 2>/dev/null || true
+    echo "  service: $s enabled"
+  fi
+done
+
+echo "✓ Hardware autodetect completo"

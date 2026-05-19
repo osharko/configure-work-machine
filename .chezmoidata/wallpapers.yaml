@@ -1,0 +1,32 @@
+# Wallpaper riproducibili — scaricati al primo apply via run_once_after_82-wallpapers.
+# Ogni voce può essere:
+#   - un ID Wallhaven (es. "8gd2gy")
+#   - un URL diretto (es. https://example.com/foo.jpg)
+# Le sub-cartelle = "tema" Noctalia (swappabili dal Wallpaper Selector).
+wallpapers:
+  Pastello:
+    # Wallhaven — anime/sakura/stazioni, palette pastello
+    - 8gd2gy
+    - eolmrl
+    - ly238y
+    - oxw727
+    - w5lpm6
+    - yqg6r7
+    - e8xpeo
+    - z8me3y
+    - ly9eml
+    - je52zm
+    # ArtStation — Modeng "Over" series
+    - https://cdna.artstation.com/p/assets/images/images/088/076/562/large/modeng-over-s-05-night.jpg
+    - https://cdnb.artstation.com/p/assets/images/images/088/076/565/large/modeng-over-s-06.jpg
+
+  Code:
+    # Wallhaven — matrix/linux/terminal, mood lavoro
+    - 3zgz2y
+    - jxyopy
+    - jexovp
+    - yqmx5d
+    - 0p52pj
+    - pkogdp
+    - weg7px
+    - 4dq75m

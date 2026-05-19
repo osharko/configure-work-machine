@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Package picker — Omarchy → CachyOS+Niri+Noctalia</title>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --bg-elev: #18181b;
+    --bg-hi: #1f1f23;
+    --line: #2a2a2f;
+    --text: #e6e6e6;
+    --muted: #9a9aa3;
+    --accent: #f5b042;
+    --keep: #4ade80;
+    --drop: #f87171;
+    --decide: #facc15;
+    --omr: #60a5fa;
+    --usr: #c084fc;
+    --cachy: #34d399;
+    --new: #f5b042;
+    --auto: #22d3ee;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Inter", "Segoe UI", system-ui, sans-serif; }
+  a { color: var(--accent); }
+  button { font: inherit; cursor: pointer; }
+  code { font-family: "JetBrains Mono", "Fira Code", monospace; background: var(--bg-hi); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  aside {
+    background: var(--bg-elev);
+    border-right: 1px solid var(--line);
+    padding: 18px 0;
+    position: sticky; top: 0;
+    height: 100vh; overflow-y: auto;
+  }
+  aside h1 { font-size: 14px; padding: 0 18px 10px; margin: 0; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; }
+  aside .summary {
+    margin: 0 12px 16px; padding: 10px 12px; background: var(--bg-hi); border-radius: 8px;
+    font-size: 12px; color: var(--muted); border: 1px solid var(--line);
+  }
+  aside .summary b { color: var(--text); display: block; font-size: 22px; font-weight: 600; }
+  nav button.tab {
+    width: 100%; text-align: left; background: none; border: 0; color: var(--text);
+    padding: 9px 18px; display: flex; justify-content: space-between; align-items: center;
+    border-left: 3px solid transparent;
+  }
+  nav button.tab:hover { background: var(--bg-hi); }
+  nav button.tab.active { background: var(--bg-hi); border-left-color: var(--accent); color: var(--accent); }
+  nav .count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  nav button.tab.active .count { color: var(--accent); }
+
+  /* Main */
+  main { padding: 24px 32px 140px; max-width: 1100px; }
+  header.section-h { margin: 0 0 18px; }
+  header.section-h h2 { margin: 0; font-size: 22px; }
+  header.section-h p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+  /* Filter bar */
+  .filters {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    background: var(--bg-elev); padding: 10px 14px; border: 1px solid var(--line);
+    border-radius: 8px; margin-bottom: 16px;
+  }
+  .filters .pill {
+    background: var(--bg-hi); border: 1px solid var(--line); color: var(--muted);
+    padding: 4px 10px; border-radius: 999px; font-size: 12px;
+  }
+  .filters .pill.on { color: var(--text); border-color: var(--accent); }
+  .filters input[type=search] {
+    flex: 1; min-width: 180px; background: var(--bg-hi); border: 1px solid var(--line);
+    color: var(--text); padding: 6px 10px; border-radius: 6px;
+  }
+
+  /* Package cards */
+  .pkg-list { display: flex; flex-direction: column; gap: 8px; }
+  .pkg {
+    display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start;
+    padding: 12px 14px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .pkg.checked { border-color: rgba(74,222,128,0.35); background: rgba(74,222,128,0.04); }
+  .pkg.rec-drop { opacity: 0.85; }
+  .pkg input[type=checkbox] {
+    width: 18px; height: 18px; accent-color: var(--keep); margin-top: 2px;
+  }
+  .pkg .name {
+    font-family: "JetBrains Mono", monospace; font-size: 13.5px; color: var(--text);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .pkg .note { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .badge {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; font-family: "JetBrains Mono", monospace;
+  }
+  .badge.omr   { background: rgba(96,165,250,0.12); color: var(--omr); }
+  .badge.usr   { background: rgba(192,132,252,0.12); color: var(--usr); }
+  .badge.cachy { background: rgba(52,211,153,0.12); color: var(--cachy); }
+  .badge.new   { background: rgba(245,176,66,0.12); color: var(--new); }
+  .badge.auto  { background: rgba(34,211,238,0.12); color: var(--auto); }
+  .badge.aur   { background: rgba(250,204,21,0.10); color: var(--decide); border: 1px dashed rgba(250,204,21,0.4); }
+  .rec-flag { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .rec-flag.keep   { color: var(--keep); }
+  .rec-flag.drop   { color: var(--drop); }
+  .rec-flag.decide { color: var(--decide); }
+  .rec-flag::before { content: "● "; }
+
+  /* Bottom action bar */
+  .actionbar {
+    position: fixed; bottom: 0; left: 260px; right: 0;
+    background: var(--bg-elev); border-top: 1px solid var(--line);
+    padding: 14px 32px; display: flex; gap: 10px; justify-content: flex-end;
+    align-items: center; backdrop-filter: blur(8px);
+  }
+  .actionbar .stat { color: var(--muted); margin-right: auto; font-size: 12.5px; }
+  .actionbar .stat b { color: var(--text); }
+  .actionbar button {
+    background: var(--bg-hi); border: 1px solid var(--line); color: var(--text);
+    padding: 8px 14px; border-radius: 6px;
+  }
+  .actionbar button.primary { background: var(--accent); color: #1a1300; border-color: var(--accent); font-weight: 600; }
+  .actionbar button:hover { filter: brightness(1.1); }
+
+  /* Modal */
+  dialog { background: var(--bg-elev); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 0; max-width: 900px; width: 92vw; max-height: 80vh; }
+  dialog::backdrop { background: rgba(0,0,0,0.7); }
+  dialog header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+  dialog header h3 { margin: 0; font-size: 16px; }
+  dialog .body { padding: 16px 20px; overflow-y: auto; max-height: 60vh; }
+  dialog pre { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px; font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--text);
+    overflow-x: auto; }
+  dialog footer { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* Help legend */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .group-toggle { background: none; border: 0; color: var(--accent); font-size: 12px; padding: 4px 0; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside>
+    <h1>Migrazione</h1>
+    <div class="summary">
+      <b id="sum-count">0</b>
+      pacchetti selezionati
+      <div style="margin-top:6px;font-size:11.5px;line-height:1.5">
+        <span style="color:var(--keep)">●</span> consigliato
+        <span style="color:var(--decide);margin-left:6px">●</span> da decidere
+        <span style="color:var(--drop);margin-left:6px">●</span> da scartare
+      </div>
+    </div>
+    <h1>Sezioni</h1>
+    <nav id="tabs"></nav>
+    <h1 style="margin-top:18px">Legenda fonte</h1>
+    <div class="legend" style="padding: 0 18px;">
+      <span><span class="badge omr">OMR</span> da Omarchy</span>
+      <span><span class="badge usr">TU</span> aggiunto da te</span>
+      <span><span class="badge cachy">CACHY</span> dal Niri spin</span>
+      <span><span class="badge new">NEW</span> da aggiungere</span>
+      <span><span class="badge auto">AUTO</span> autodetect chezmoi</span>
+      <span><span class="badge aur">AUR</span> AUR (yay)</span>
+    </div>
+  </aside>
+
+  <main>
+    <header class="section-h" id="section-header">
+      <h2>—</h2><p>—</p>
+    </header>
+
+    <div class="filters">
+      <input type="search" id="search" placeholder="cerca pacchetto…">
+      <button class="pill on" data-filter="all">Tutti</button>
+      <button class="pill" data-filter="decide">Solo da decidere</button>
+      <button class="pill" data-filter="checked">Solo selezionati</button>
+      <button class="pill" data-filter="omr">Solo Omarchy</button>
+      <button class="pill" data-filter="usr">Solo aggiunti da te</button>
+      <button class="group-toggle" id="apply-rec">Applica i miei consigli</button>
+    </div>
+
+    <div class="pkg-list" id="pkg-list"></div>
+  </main>
+</div>
+
+<div class="actionbar">
+  <div class="stat">
+    <b id="stat-checked">0</b> selezionati &nbsp;·&nbsp;
+    <span style="color:var(--keep)">●</span> <b id="stat-keep">0</b> keep &nbsp;
+    <span style="color:var(--decide)">●</span> <b id="stat-decide">0</b> decide &nbsp;
+    <span style="color:var(--drop)">●</span> <b id="stat-drop">0</b> drop
+  </div>
+  <button onclick="resetAll()">Reset</button>
+  <button onclick="exportYaml()" class="primary">Genera packages.yaml</button>
+</div>
+
+<dialog id="export-dialog">
+  <header>
+    <h3>packages.yaml</h3>
+    <button onclick="document.getElementById('export-dialog').close()">×</button>
+  </header>
+  <div class="body">
+    <pre id="export-output"></pre>
+  </div>
+  <footer>
+    <button onclick="copyExport()">Copia</button>
+    <button onclick="downloadExport()" class="primary">Scarica</button>
+  </footer>
+</dialog>
+
+<script>
+/* ---------- DATA ---------- */
+/* Allineato allo stato reale di .180 (CachyOS-Niri-Noctalia spin):
+ *   CACHY = già installato dalla spin (meta cachyos-niri-noctalia o config-pack)
+ *   NEW   = aggiunta nostra
+ *   AUR   = pacchetto AUR
+ * Sezioni rimosse perché coperte interamente dalla spin: greeter (SDDM),
+ * niri-stack (cachyos-niri-noctalia + dipendenze), printing (cups+foomatic),
+ * shell-prompt/toolchain (mise gestisce tutto), input (fcitx5 non serve).
+ */
+const SECTIONS = [
+  {
+    id: "cli", title: "Core CLI",
+    desc: "CLI moderne. La spin porta già btop/duf/fastfetch/glances/ripgrep/nvtop: lasciali a CACHY.",
+    packages: [
+      { n: "bat", s: "new", r: "keep", d: "cat con syntax highlight; alias cat='bat --paging=never'" },
+      { n: "eza", s: "new", r: "keep", d: "ls moderno (icone, git status, tree)" },
+      { n: "fd", s: "new", r: "keep", d: "find moderno; alias find='fd'" },
+      { n: "fzf", s: "new", r: "keep", d: "fuzzy finder (Ctrl+R, Ctrl+T)" },
+      { n: "zoxide", s: "new", r: "keep", d: "cd intelligente che ricorda le dir frequenti" },
+      { n: "starship", s: "new", r: "keep", d: "prompt configurabile (alternativa a powerlevel10k che la spin tiene)" },
+      { n: "jq", s: "new", r: "keep", d: "filtro JSON da CLI" },
+      { n: "yq", s: "new", r: "keep", d: "stessa cosa di jq ma per YAML" },
+      { n: "tldr", s: "new", r: "keep", d: "esempi pratici dei man page" },
+      { n: "tmux", s: "new", r: "keep", d: "multiplexer terminale" },
+      { n: "gum", s: "new", r: "keep", d: "componenti TUI per script bash (charm.sh)" },
+      { n: "aria2", s: "new", r: "keep", d: "downloader multi-connessione, supporta torrent" },
+      { n: "procs", s: "new", r: "keep", d: "ps moderno; alias ps='procs'" },
+      { n: "dust", s: "new", r: "keep", d: "du moderno con barre visuali; alias du='dust'" },
+      { n: "git-delta", s: "new", r: "keep", d: "diff/git pager con syntax highlighting (gitconfig lo usa)" },
+      { n: "github-cli", s: "new", r: "keep", d: "comando gh (PR, issues da terminale)" },
+      { n: "lazygit", s: "new", r: "keep", d: "TUI per git" },
+      { n: "lazydocker", s: "new", r: "keep", d: "TUI per docker" },
+      { n: "gping", s: "new", r: "decide", d: "ping con grafico ASCII real-time" },
+      { n: "bandwhich", s: "new", r: "decide", d: "monitor utilizzo rete per processo" },
+      { n: "xh", s: "new", r: "decide", d: "client HTTP CLI (alternativa httpie/curl)" },
+      { n: "viddy", s: "new", r: "decide", d: "watch moderno con history e diff" },
+      { n: "hyperfine", s: "new", r: "decide", d: "benchmarking statistico di comandi shell" },
+      { n: "btop", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "duf", s: "cachy", r: "drop", d: "AUTO: già nella spin (df moderno)" },
+      { n: "fastfetch", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "ripgrep", s: "cachy", r: "drop", d: "AUTO: già nella spin (alias grep='rg')" },
+      { n: "nvtop", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "amdgpu_top", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "glances", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "less", s: "cachy", r: "drop", d: "AUTO: dipendenza base" },
+      { n: "man-db", s: "cachy", r: "drop", d: "AUTO: dipendenza base" },
+    ]
+  },
+
+  {
+    id: "toolchain", title: "Toolchain (mise)",
+    desc: "Linguaggi gestiti via mise (~/.config/mise/config.toml). Niente jdk/go/bun/rust da pacman.",
+    packages: [
+      { n: "mise", s: "new", r: "keep", d: "version manager polyglot (sostituisce nvm/jenv/sdkman/pyenv)" },
+      { n: "direnv", s: "new", r: "keep", d: "env per-progetto entrando nella cartella" },
+    ]
+  },
+
+  {
+    id: "editor", title: "Editor",
+    desc: "Editor testuali e IDE. Alacritty/code/vim/nano già nella spin.",
+    packages: [
+      { n: "neovim", s: "new", r: "keep", d: "nvim (l'alias n() del bashrc/zshrc lo richiama)" },
+      { n: "zed", s: "new", r: "keep", d: "editor Rust con AI nativa" },
+      { n: "helix", s: "new", r: "decide", d: "editor terminale modale" },
+      { n: "sublime-text-4", s: "new", r: "keep", d: "editor proprietario veloce", aur: true },
+      { n: "obsidian", s: "new", r: "keep", d: "knowledge base markdown", aur: true },
+      { n: "typora", s: "new", r: "keep", d: "markdown WYSIWYG", aur: true },
+      { n: "alacritty", s: "cachy", r: "drop", d: "AUTO: già nella spin (terminale default)" },
+      { n: "code", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "micro", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "meld", s: "cachy", r: "drop", d: "AUTO: già nella spin (diff GUI)" },
+    ]
+  },
+
+  {
+    id: "container", title: "Container / VM",
+    desc: "Spin: docker + docker-compose + virt-manager. Aggiungiamo solo distrobox/podman/quickemu.",
+    packages: [
+      { n: "docker-buildx", s: "new", r: "keep", d: "build multi-arch e cache avanzata" },
+      { n: "distrobox", s: "new", r: "keep", d: "container con home condivisa, dev isolati" },
+      { n: "podman", s: "new", r: "keep", d: "backend rootless di distrobox" },
+      { n: "quickemu", s: "new", r: "keep", d: "wrapper QEMU semplice" },
+      { n: "quickgui-bin", s: "new", r: "keep", d: "GUI per quickemu", aur: true },
+      { n: "docker", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "docker-compose", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "virt-manager", s: "cachy", r: "drop", d: "AUTO: già nella spin (libvirt da abilitare)" },
+    ]
+  },
+
+  {
+    id: "cloud", title: "Cloud / DevOps",
+    desc: "Tooling Azure/Kubernetes per enterprise tooling.",
+    packages: [
+      { n: "azure-cli", s: "new", r: "keep", d: "CLI Azure" },
+      { n: "kubectl", s: "new", r: "keep", d: "CLI Kubernetes" },
+      { n: "argocd", s: "new", r: "decide", d: "CLI ArgoCD per GitOps" },
+    ]
+  },
+
+  {
+    id: "ai", title: "AI / Assistenti",
+    desc: "Claude Code locale; AI inference su gaming-pc remoto.",
+    packages: [
+      { n: "claude-code", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "gemini-cli", s: "new", r: "decide", d: "CLI Google Gemini" },
+      { n: "opencode", s: "new", r: "decide", d: "agent CLI open source" },
+    ]
+  },
+
+  {
+    id: "remote", title: "VPN / RDP / Sharing",
+    desc: "Lavoro remoto su rete cliente.",
+    packages: [
+      { n: "openfortivpn", s: "new", r: "keep", d: "client Forti VPN da CLI" },
+      { n: "forticlient-vpn", s: "new", r: "keep", d: "client ufficiale Fortinet (GUI)", aur: true },
+      { n: "freerdp", s: "new", r: "keep", d: "client RDP da CLI" },
+      { n: "remmina", s: "new", r: "decide", d: "GUI per RDP/VNC/SSH" },
+      { n: "localsend", s: "new", r: "decide", d: "AirDrop-like multipiattaforma" },
+      { n: "packet", s: "new", r: "decide", d: "alternativa LocalSend", aur: true },
+    ]
+  },
+
+  {
+    id: "apps", title: "App Desktop",
+    desc: "Browser firefox/brave già nella spin. Aggiungiamo personali.",
+    packages: [
+      { n: "1password-beta", s: "new", r: "keep", d: "GUI 1Password (SSH agent + autofill)", aur: true },
+      { n: "1password-cli", s: "new", r: "keep", d: "comando op" },
+      { n: "telegram-desktop", s: "new", r: "keep", d: "Telegram" },
+      { n: "signal-desktop", s: "new", r: "decide", d: "Signal" },
+      { n: "beekeeper-studio-bin", s: "new", r: "keep", d: "GUI multi-database", aur: true },
+      { n: "mongodb-compass-bin", s: "new", r: "keep", d: "GUI ufficiale MongoDB", aur: true },
+      { n: "evince", s: "new", r: "keep", d: "PDF reader GTK" },
+      { n: "mpv", s: "new", r: "keep", d: "video player minimale" },
+      { n: "imv", s: "new", r: "keep", d: "image viewer Wayland-friendly" },
+      { n: "blanket", s: "new", r: "keep", d: "suoni ambientali" },
+      { n: "ventoy-bin", s: "new", r: "decide", d: "USB multi-boot ISO", aur: true },
+      { n: "firefox", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "brave-bin", s: "cachy", r: "drop", d: "AUTO: già nella spin (AUR ma preinstallato)" },
+    ]
+  },
+
+  {
+    id: "hardware", title: "Hardware",
+    desc: "Tutto idempotente: lo script run_onchange_before_15-hardware.sh.tmpl rileva CPU/GPU/USB/etc e installa solo il necessario. Qui solo extra fissi.",
+    packages: [
+      { n: "ddcutil", s: "new", r: "keep", d: "controllo brightness/luminosità monitor via DDC/CI" },
+      { n: "fprintd", s: "new", r: "keep", d: "daemon impronte (no-op se nessun device)" },
+    ]
+  },
+
+  {
+    id: "fs", title: "Filesystem",
+    desc: "Spin ha già snapper/btrfs-progs/btrfs-assistant/exfatprogs/gparted. Niente da fare.",
+    packages: [
+      { n: "exfatprogs", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "gparted", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "btrfs-progs", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "snapper", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "btrfs-assistant", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+    ]
+  },
+
+  {
+    id: "fonts", title: "Fonts",
+    desc: "Spin: noto + cantarell + dejavu + liberation + meslo-nerd. Aggiungiamo solo Nerd Fonts e iA Writer.",
+    packages: [
+      { n: "ttf-jetbrains-mono-nerd", s: "new", r: "keep", d: "monospace principale" },
+      { n: "ttf-cascadia-mono-nerd", s: "new", r: "keep", d: "alternativa Microsoft" },
+      { n: "ttf-ia-writer", s: "new", r: "keep", d: "Duospace, ottima per markdown" },
+      { n: "woff2-font-awesome", s: "new", r: "decide", d: "icon font web (lucide preferibile)" },
+      { n: "noto-fonts", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "noto-fonts-cjk", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "noto-fonts-emoji", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "ttf-meslo-nerd", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+    ]
+  },
+
+  {
+    id: "misc", title: "Misc",
+    desc: "Roba già coperta dalla spin: ufw/avahi/nss-mdns/plymouth/flatpak.",
+    packages: [
+      { n: "ufw", s: "cachy", r: "drop", d: "AUTO: già nella spin (run_once apre ssh + enable)" },
+      { n: "avahi", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "nss-mdns", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+      { n: "plymouth", s: "cachy", r: "drop", d: "AUTO: già nella spin (cachyos-plymouth-theme)" },
+      { n: "flatpak", s: "cachy", r: "drop", d: "AUTO: già nella spin" },
+    ]
+  },
+
+  {
+    id: "services", title: "Servizi & Gruppi",
+    desc: "Servizi systemd da abilitare e gruppi utente. Spin ha già attivi: cups/avahi/bluetooth/sddm/NetworkManager/ufw.",
+    packages: [
+      { n: "service:sshd", s: "new", r: "keep", d: "SERVIZIO: server SSH (+ ufw allow ssh)" },
+      { n: "service:libvirtd", s: "new", r: "keep", d: "SERVIZIO: virt-manager (installato ma non abilitato di default)" },
+      { n: "group:libvirt", s: "new", r: "keep", d: "GRUPPO: per virt-manager senza sudo" },
+      { n: "group:i2c", s: "new", r: "keep", d: "GRUPPO: per ddcutil senza sudo" },
+      { n: "group:docker", s: "new", r: "keep", d: "GRUPPO: docker senza sudo" },
+    ]
+  },
+];
+
+/* ---------- STATE ---------- */
+const STORAGE_KEY = "pkg-picker-v2";
+let state = loadState();
+let activeTab = SECTIONS[0].id;
+let activeFilter = "all";
+let searchQ = "";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  // default: pre-seleziona quelli "keep"
+  const s = {};
+  SECTIONS.forEach(sec => sec.packages.forEach(p => {
+    s[p.n] = p.r === "keep";
+  }));
+  return s;
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+/* ---------- RENDER ---------- */
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.innerHTML = "";
+  SECTIONS.forEach(sec => {
+    const total = sec.packages.length;
+    const checked = sec.packages.filter(p => state[p.n]).length;
+    const btn = document.createElement("button");
+    btn.className = "tab" + (sec.id === activeTab ? " active" : "");
+    btn.innerHTML = `<span>${sec.title}</span><span class="count">${checked}/${total}</span>`;
+    btn.onclick = () => { activeTab = sec.id; renderAll(); window.scrollTo(0,0); };
+    tabs.appendChild(btn);
+  });
+}
+
+function renderHeader() {
+  const sec = SECTIONS.find(s => s.id === activeTab);
+  document.getElementById("section-header").innerHTML =
+    `<h2>${sec.title}</h2><p>${sec.desc}</p>`;
+}
+
+function packageMatches(p) {
+  if (searchQ && !(p.n.toLowerCase().includes(searchQ) || (p.d || "").toLowerCase().includes(searchQ))) return false;
+  if (activeFilter === "decide" && p.r !== "decide") return false;
+  if (activeFilter === "checked" && !state[p.n]) return false;
+  if (activeFilter === "omr" && p.s !== "omr") return false;
+  if (activeFilter === "usr" && p.s !== "usr") return false;
+  return true;
+}
+
+function renderList() {
+  const sec = SECTIONS.find(s => s.id === activeTab);
+  const list = document.getElementById("pkg-list");
+  list.innerHTML = "";
+  const visible = sec.packages.filter(packageMatches);
+  if (visible.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);padding:30px;text-align:center;">Nessun pacchetto in questa sezione corrisponde al filtro.</div>`;
+    return;
+  }
+  visible.forEach(p => {
+    const id = "pk-" + p.n.replace(/[^a-z0-9]/gi, "_");
+    const checked = state[p.n] ? "checked" : "";
+    const sourceBadge = p.s === "new" ? `<span class="badge new">NEW</span>`
+                      : p.s === "cachy" ? `<span class="badge cachy">CACHY</span>`
+                      : p.s === "omr" ? `<span class="badge omr">OMR</span>`
+                      : p.s === "auto" ? `<span class="badge auto">AUTO</span>`
+                      : `<span class="badge usr">TU</span>`;
+    const aurBadge = p.aur ? `<span class="badge aur">AUR</span>` : "";
+    const div = document.createElement("label");
+    div.className = "pkg" + (state[p.n] ? " checked" : "") + (p.r === "drop" ? " rec-drop" : "");
+    div.htmlFor = id;
+    div.innerHTML = `
+      <input type="checkbox" id="${id}" ${checked} data-name="${p.n}">
+      <div>
+        <div class="name">${p.n} ${sourceBadge} ${aurBadge}
+          <span class="rec-flag ${p.r}">${p.r === "keep" ? "consigliato" : p.r === "drop" ? "scarta" : "decidi"}</span>
+        </div>
+        <div class="note">${p.d || ""}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('input[type=checkbox]').forEach(el => {
+    el.addEventListener("change", e => {
+      state[e.target.dataset.name] = e.target.checked;
+      saveState();
+      renderTabs(); renderStats();
+      e.target.closest(".pkg").classList.toggle("checked", e.target.checked);
+    });
+  });
+}
+
+function renderStats() {
+  let total = 0, keep = 0, decide = 0, drop = 0;
+  SECTIONS.forEach(sec => sec.packages.forEach(p => {
+    if (state[p.n]) {
+      total++;
+      if (p.r === "keep") keep++;
+      else if (p.r === "decide") decide++;
+      else drop++;
+    }
+  }));
+  document.getElementById("sum-count").textContent = total;
+  document.getElementById("stat-checked").textContent = total;
+  document.getElementById("stat-keep").textContent = keep;
+  document.getElementById("stat-decide").textContent = decide;
+  document.getElementById("stat-drop").textContent = drop;
+}
+
+function renderAll() { renderTabs(); renderHeader(); renderList(); renderStats(); }
+
+/* ---------- ACTIONS ---------- */
+document.getElementById("search").addEventListener("input", e => {
+  searchQ = e.target.value.trim().toLowerCase();
+  renderList();
+});
+
+document.querySelectorAll(".filters .pill").forEach(b => {
+  b.addEventListener("click", () => {
+    activeFilter = b.dataset.filter;
+    document.querySelectorAll(".filters .pill").forEach(x => x.classList.toggle("on", x === b));
+    renderList();
+  });
+});
+
+document.getElementById("apply-rec").addEventListener("click", () => {
+  if (!confirm("Applicare i miei consigli (keep=on, drop/decide=off) a TUTTE le sezioni?\nLe tue scelte attuali saranno sovrascritte.")) return;
+  SECTIONS.forEach(sec => sec.packages.forEach(p => state[p.n] = p.r === "keep"));
+  saveState(); renderAll();
+});
+
+function resetAll() {
+  if (!confirm("Resettare tutte le scelte ai consigli predefiniti?")) return;
+  SECTIONS.forEach(sec => sec.packages.forEach(p => state[p.n] = p.r === "keep"));
+  saveState(); renderAll();
+}
+
+/* ---------- EXPORT YAML ---------- */
+function exportYaml() {
+  const buckets = {
+    pacman: { cli: [], toolchain: [], editors: [], containers: [],
+              cloud: [], ai: [], remote: [], apps: [],
+              hardware: [], filesystems: [], fonts: [], misc: [] },
+    aur: { apps: [], editors: [], hardware: [], utils: [], vpn: [] },
+    services: { system: [] },
+    groups: []
+  };
+
+  // Map section→target bucket (yaml)
+  const map = {
+    "cli": ["pacman","cli"], "toolchain": ["pacman","toolchain"],
+    "editor": ["pacman","editors"], "container": ["pacman","containers"],
+    "cloud": ["pacman","cloud"], "ai": ["pacman","ai"],
+    "remote": ["pacman","remote"], "apps": ["pacman","apps"],
+    "hardware": ["pacman","hardware"], "fs": ["pacman","filesystems"],
+    "fonts": ["pacman","fonts"], "misc": ["pacman","misc"]
+  };
+
+  SECTIONS.forEach(sec => {
+    sec.packages.forEach(p => {
+      if (!state[p.n]) return;
+      // services / groups
+      if (p.n.startsWith("service:")) {
+        buckets.services.system.push(p.n.slice(8));
+        return;
+      }
+      if (p.n.startsWith("group:")) {
+        buckets.groups.push(p.n.slice(6));
+        return;
+      }
+      const target = map[sec.id];
+      if (!target) return;
+      const isAur = !!p.aur;
+      if (isAur) {
+        const aurMap = { "editor": "editors", "hardware": "hardware",
+                         "remote": "vpn", "apps": "apps" };
+        const ab = aurMap[sec.id] || "utils";
+        if (!buckets.aur[ab]) buckets.aur[ab] = [];
+        buckets.aur[ab].push(p.n);
+      } else {
+        if (!buckets.pacman[target[1]]) buckets.pacman[target[1]] = [];
+        buckets.pacman[target[1]].push(p.n);
+      }
+    });
+  });
+
+  // Format YAML
+  let y = "# packages.yaml — generato da package-picker.html\n";
+  y += `# ${new Date().toISOString()}\n\n`;
+  y += "pacman:\n";
+  Object.entries(buckets.pacman).forEach(([k, arr]) => {
+    if (arr.length === 0) return;
+    y += `  ${k}:\n`;
+    arr.sort().forEach(p => y += `    - ${p}\n`);
+  });
+
+  y += "\naur:\n";
+  Object.entries(buckets.aur).forEach(([k, arr]) => {
+    if (arr.length === 0) return;
+    y += `  ${k}:\n`;
+    arr.sort().forEach(p => y += `    - ${p}\n`);
+  });
+
+  y += "\nflatpak: []\n\n";
+  y += "services:\n";
+  y += "  system:\n";
+  if (buckets.services.system.length === 0) y += "    []\n";
+  else buckets.services.system.sort().forEach(s => y += `    - ${s}\n`);
+  y += "  user: []\n\n";
+
+  y += "groups:\n";
+  if (buckets.groups.length === 0) y += "  []\n";
+  else buckets.groups.sort().forEach(g => y += `  - ${g}\n`);
+
+  document.getElementById("export-output").textContent = y;
+  document.getElementById("export-dialog").showModal();
+}
+
+function copyExport() {
+  const t = document.getElementById("export-output").textContent;
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = event.target;
+    const old = btn.textContent;
+    btn.textContent = "Copiato!";
+    setTimeout(() => btn.textContent = old, 1200);
+  });
+}
+
+function downloadExport() {
+  const t = document.getElementById("export-output").textContent;
+  const blob = new Blob([t], { type: "text/yaml" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "packages.yaml";
+  a.click();
+}
+
+/* ---------- INIT ---------- */
+renderAll();
+</script>
+</body>
+</html>

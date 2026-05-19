@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lazyjournal
+GenericName=Journal/Log TUI
+Comment=Terminal UI for journalctl, file system logs, and container logs
+Exec=alacritty -e lazyjournal
+Icon=utilities-log-viewer
+Terminal=false
+Categories=System;Monitor;
+Keywords=journalctl;log;tui;

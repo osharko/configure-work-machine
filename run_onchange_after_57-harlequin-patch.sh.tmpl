@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Patch automatica harlequin per compat con textual >=8.x.
+# Upstream bug: harlequin/colors.py fa VALID_THEMES.pop("textual-ansi") senza
+# default arg, e textual >=8 ha rimosso quel tema → KeyError all'avvio.
+#
+# Lo script è AUTO-NO-OP a prova di futuro: cerca il pattern bugged nel file
+# di sistema; se trovato → patcha; se non trovato (es. harlequin >=2.6 con fix
+# upstream, o pkg disinstallato) → exit silenzioso. Nessuna versione hardcoded.
+# Trigger hash: {{ "harlequin-textual-patch-v2" | sha256sum }}
+{{- if .is_work_machine }}
+set -euo pipefail
+
+COLORS_PY=$(find /usr/lib/python3.* -path '*/harlequin/colors.py' 2>/dev/null | head -1)
+
+if [ -z "$COLORS_PY" ] || [ ! -f "$COLORS_PY" ]; then
+    exit 0  # harlequin non installato, salta
+fi
+
+if grep -q 'VALID_THEMES.pop("textual-ansi", None)' "$COLORS_PY"; then
+    exit 0  # patch già applicata
+fi
+
+if grep -q 'VALID_THEMES.pop("textual-ansi")' "$COLORS_PY"; then
+    sudo sed -i 's|VALID_THEMES.pop("textual-ansi")|VALID_THEMES.pop("textual-ansi", None)|' "$COLORS_PY"
+    echo "✓ harlequin/colors.py patchato per textual 8.x compat"
+fi
+{{- else }}
+exit 0  # non work machine, harlequin non installato
+{{- end }}

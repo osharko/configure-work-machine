@@ -1,0 +1,10 @@
+[Unit]
+Description=Sync Noctalia color scheme to GTK/GNOME settings
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/noctalia-theme-sync
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Niri tweaks idempotenti — si applicano sopra alla config della spin
+# CachyOS-Niri-Noctalia (che è in ~/.config/niri/cfg/*.kdl).
+#
+# Cosa fa:
+#   - misc.kdl: screenshot-path → ~/Pictures/Screenshots/...
+#   - keybinds.kdl: aggiunge Print/Mod+Print/Ctrl+Print per screenshot
+#   - mkdir Pictures/{Screenshots,Wallpapers/{Pastello,Code}}
+#
+# Niri ha auto-reload del config → cambiamenti applicati live.
+# Trigger hash: {{ output "sh" "-c" "ls -la ~/.config/niri/cfg/*.kdl 2>/dev/null" | sha256sum }}
+set -euo pipefail
+
+NIRI_DIR="$HOME/.config/niri/cfg"
+MISC="$NIRI_DIR/misc.kdl"
+KEYBINDS="$NIRI_DIR/keybinds.kdl"
+
+# ─── 1. screenshot-path ─────────────────────────────────────────────────────
+if [ -f "$MISC" ] && grep -q 'screenshot-path null' "$MISC"; then
+    sed -i 's|screenshot-path null|screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"|' "$MISC"
+    echo "→ niri misc.kdl: screenshot-path → ~/Pictures/Screenshots/..."
+fi
+
+# ─── 2. Print key bindings ──────────────────────────────────────────────────
+if [ -f "$KEYBINDS" ] && ! grep -qE '^\s*Print\s' "$KEYBINDS"; then
+    # Inserisce dopo il commento "// ─── Screenshots ───"
+    sed -i '/\/\/ ─── Screenshots ───/a\
+    Print                               { screenshot; }\
+    Mod+Print                           { screenshot-screen; }\
+    Ctrl+Print                          { screenshot-window; }\
+    // legacy CachyOS-Niri defaults: alcuni layout non hanno Print' "$KEYBINDS"
+    echo "→ niri keybinds.kdl: Print/Mod+Print/Ctrl+Print aggiunti"
+fi
+
+# ─── 3. dir Pictures/{Screenshots,Wallpapers/{Pastello,Code}} ───────────────
+# Sub-cartelle = "tema" → swap da Noctalia Wallpaper Selector.
+#   - Pastello: anime/sakura/stazioni (mood lifestyle)
+#   - Code:     matrix/linux/terminal (mood lavoro)
+# Download via `wallhaven-download <id>`. Per scaricare in un tema specifico:
+#   WALLHAVEN_DEST=~/Pictures/Wallpapers/Code wallhaven-download <id1> <id2>
+mkdir -p \
+    "$HOME/Pictures/Screenshots" \
+    "$HOME/Pictures/Wallpapers/Pastello" \
+    "$HOME/Pictures/Wallpapers/Code"
+
+echo "✓ Niri tweaks applicati"

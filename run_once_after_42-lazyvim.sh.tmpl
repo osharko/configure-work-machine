@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Setup LazyVim starter (https://www.lazyvim.org/).
+# Eseguito UNA volta su macchina nuova. Se ~/.config/nvim esiste già con
+# init.lua, viene backuppato in nvim.bak.<epoch>.
+#
+# Dopo il primo avvio di nvim, lazy.nvim scarica i plugin automaticamente.
+# Le personalizzazioni utente vanno in ~/.config/nvim/lua/plugins/*.lua
+# (lazy.nvim li auto-discovers, sopravvivono agli update LazyVim).
+set -euo pipefail
+
+NVIM_DIR="$HOME/.config/nvim"
+
+if [ -f "$NVIM_DIR/init.lua" ] && grep -q 'lazyvim' "$NVIM_DIR/init.lua" 2>/dev/null; then
+    echo "✓ LazyVim già installato"
+    exit 0
+fi
+
+if [ -d "$NVIM_DIR" ]; then
+    BACKUP="${NVIM_DIR}.bak.$(date +%s)"
+    echo "→ Backup config nvim esistente in $BACKUP"
+    mv "$NVIM_DIR" "$BACKUP"
+fi
+
+echo "→ Clone LazyVim starter"
+git clone --depth=1 https://github.com/LazyVim/starter "$NVIM_DIR"
+rm -rf "$NVIM_DIR/.git"   # niente git history, è solo template
+
+echo "✓ LazyVim pronto. Al primo lancio nvim → installa plugin auto."
+echo "  Custom plugin: aggiungi file in ~/.config/nvim/lua/plugins/<nome>.lua"

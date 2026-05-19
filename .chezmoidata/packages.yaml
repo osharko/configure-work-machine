@@ -1,0 +1,220 @@
+# Pacchetti gestiti da chezmoi.
+# Modifica qui → al prossimo `chezmoi apply` lo script di install si rilancia.
+#
+# NB: tutto ciò che la spin CachyOS-Niri-Noctalia installa già è omesso
+# (audio/print/bluetooth/firewall/AMD/snapper/networkmanager/docker/virt-manager…).
+# Se serve verifica: `pacman -Qe | grep <pkg>` su una macchina vergine.
+
+pacman:
+  # ─── Core CLI / shell ─────────────────────────────────────────────
+  cli:
+    - chezmoi
+    # 1password-cli è in AUR (vedi aur.apps), non nei repo ufficiali
+    - github-cli
+    - lazygit
+    - lazydocker
+    - bat
+    - chafa          # terminal image viewer (kitty graphics/sixel/symbols)
+    - eza
+    - fd
+    - dust
+    - duf
+    - procs
+    - fzf
+    - zoxide
+    - starship
+    - gum
+    - tealdeer       # client tldr in Rust (più veloce di tldr Python; spin Niri lo include già)
+    - tmux
+    - cliphist       # clipboard history (richiesto da Noctalia clipboard plugin)
+    - wl-clipboard   # wl-paste/wl-copy (di solito spin lo include, ma esplicito)
+    - flatpak        # runtime per app sandbox (flathub configurato post-install)
+    - qt6ct          # Qt6 theme config (per propagare dark mode a Qt apps)
+    - neovim
+    - jq
+    - yq
+    - aria2
+    - git-delta
+    - lazygit       # TUI per git (staging/commit/branches/diff)
+    - lazydocker    # TUI per docker (containers/images/logs)
+    - lazyjournal   # TUI per journalctl + log files + container logs
+
+  # ─── Toolchain (gestione per-progetto via mise) ───────────────────
+  toolchain:
+    - mise
+    - direnv
+
+  # ─── Container / VM ───────────────────────────────────────────────
+  containers:
+    - docker
+    - docker-compose
+    - docker-buildx
+    - distrobox
+    - podman            # backend rootless di distrobox
+    # quickemu è in AUR (vedi aur.utils)
+
+  # ─── Work tooling (gated da .is_work_machine, stesso flag di aur.work_only) ──
+  work_only:
+    - kubectl           # client k8s
+    - helm              # package manager k8s
+    - k9s               # TUI k8s
+    - mdcat             # render markdown nel terminale (utile per leggere README progetti)
+
+  # ─── Media center (gated da profilo mediacenter) ───────────────────
+  mediacenter:
+    - vlc               # player media universale
+    - vlc-plugins-all   # codec extra (DVD, BluRay, ecc)
+
+  # ─── Hyprland satellites compatibili con Niri (lock+idle) ─────────
+  hypr_compat:
+    - hyprlock
+    - hypridle
+    - hyprpicker
+
+  # ─── Desktop apps ─────────────────────────────────────────────────
+  apps:
+    # Terminals: alacritty leggero + ghostty per image protocol (chafa/kitten icat)
+    - alacritty
+    - ghostty
+    - seahorse         # GUI GNOME keyring (per togliere password al keyring su autologin)
+    - blanket
+    - telegram-desktop
+    - signal-desktop
+    - mpv
+    - imv
+    - evince
+    - gpu-screen-recorder   # backend HW-accel del plugin Noctalia screen-recorder
+    - noctalia-qs           # build custom quickshell per noctalia-shell — NB: NON sostituire con quickshell mainline; manca dei tipi QML (BarService, Overview, ecc.) che noctalia-shell 4.7+ richiede
+    - noctalia-shell        # config QML (bar/launcher/dock dello spin)
+    - obsidian          # nei repo extra ufficiali (non AUR)
+    - brave-bin         # browser Chromium-based (cachyos repo)
+    # Deps plugin Noctalia screen-toolkit (color picker, OCR, recorder, QR…)
+    - grim                  # screenshot Wayland
+    - slurp                 # region selection
+    - tesseract             # OCR engine
+    - tesseract-data-eng    # OCR english lang pack
+    - translate-shell       # OCR translation
+    - wl-screenrec          # screen recorder Wayland (preferred over wf-recorder)
+    - gifski                # GIF encoder hi-q (in cachyos-extra-znver4, precompilato)
+    # Deps plugin Noctalia usb-drive-manager
+    - udisks2               # mount/unmount drives
+    - ntfs-3g               # NTFS support (drive Windows)
+
+  # ─── VPN / RDP / remote ───────────────────────────────────────────
+  remote:
+    - openfortivpn
+    - freerdp
+    - localsend
+    # remmina rimosso (è nella spin di default ma non vogliamo gestirlo qui)
+    # thincast → installato via flatpak (com.thincast.client) post-install
+
+  # ─── Hardware utility ─────────────────────────────────────────────
+  hardware:
+    - ddcutil
+    - fprintd          # daemon, sempre ok averlo
+    - evtest           # richiesto dal plugin Noctalia slowbongo (legge /dev/input/event*)
+
+  # ─── Fonts ────────────────────────────────────────────────────────
+  fonts:
+    - ttf-cascadia-mono-nerd
+    - ttf-jetbrains-mono-nerd
+    - woff2-font-awesome
+    # ttf-ia-writer è in AUR (vedi aur.fonts)
+
+  # ─── Editor ──────────────────────────────────────────────────────
+  editors:
+    - zed              # editor Rust nativo, AI-first
+    - helix            # editor terminal modale (opzionale)
+    - vscodium         # VSCode open-source no-telemetry (build CachyOS-optimized)
+
+  # ─── Gaming ──────────────────────────────────────────────────────
+  gaming:
+    - steam
+    - mangohud
+    - lib32-mangohud
+    - gamemode
+    - lib32-gamemode
+    - linux-cachyos-headers   # per i moduli DKMS (xpadneo/xone)
+    # steam-native-runtime e game-devices-udev sono in AUR (vedi aur.gaming)
+
+aur:
+  apps:
+    - 1password-beta
+    - 1password-cli      # CLI ufficiale Agilebits (no repo Arch)
+    - typora
+    - beekeeper-studio-bin
+    # mongodb-compass-bin rimosso: la sua dep virtuale "libjpeg" fa scegliere
+    # a paru jpegli-git (AUR) come provider, che conflitta con libjxl.
+    # Reinstalla a parte se serve: paru -S mongodb-compass-bin --assume-installed=libjpeg=8
+    - sublime-text-4
+    # spotify spostato nella sezione mediacenter (vedi sotto)
+  mediacenter:
+    - spotify                # client musicale ufficiale (no Snap/Flatpak)
+    - jellyfin-media-player  # client Qt per server Jellyfin (consumo media remoto)
+    # Aggiungi jellyfin-server (in cachyos-extra) se vuoi anche ospitare un server locale
+  utils:
+    - quickemu-git     # VM helper (Win/macOS/Linux) — variante chaotic-aur precompilata (Fornisce "quickemu"); la versione stable "quickemu" è solo AUR-build e collide
+    - quickgui-bin     # GUI per quickemu
+    - ventoy-bin
+    - packet
+    - boxbuddy         # GUI GTK4 per distrobox (create/enter/export/upgrade)
+  # forticlient-vpn rimosso da qui → ora in work_only (gated da .is_work_machine)
+  fonts:
+    - ttf-ia-writer    # subset font iA Writer (Duospace)
+  gaming:
+    - xpadneo-dkms          # Xbox One/Series controller via Bluetooth
+    - xone-dkms             # Xbox One controller via USB / dongle
+    - game-devices-udev     # udev rules: Stadia/Steam Controller/8BitDo/PS/etc
+    # steam-native-runtime RIMOSSO: librtmp0 (AUR v2.4) non compila contro
+    # nettle 3.10+ del sistema. steam (repo) funziona come Steam Runtime container.
+    # Re-add se il maintainer AUR fixa: rimetti steam-native-runtime + i 2 libjpeg6
+    # NB: Google Stadia controller — rumble/HID built-in kernel (hid-google-stadiaff)
+    # Steam Controller — built-in (hid-steam).
+  hardware_dell:
+    - libfprint-2-tod1-broadcom-cv3plus
+    - libfprint-tod
+    # libfprint-tod-debug rimosso (orfano in AUR)
+  work_only:
+    # Installati solo se .is_work_machine == true (gated nel template 10-packages)
+    - forticlient-vpn   # VPN aziendale Fortinet
+    - harlequin         # TUI SQL multi-DB
+
+flatpak:
+  - com.thincast.client      # RDP client (replacement migliore di remmina)
+  # Altri esempi: org.gimp.GIMP, com.discordapp.Discord, ecc.
+
+# ─── Noctalia plugins ─────────────────────────────────────────────
+# Plugin abilitati dal registry https://github.com/noctalia-dev/noctalia-plugins
+# Vengono scritti in ~/.config/noctalia/plugins.json (template gestito da chezmoi).
+# Noctalia si occupa autonomamente del fetch del codice plugin.
+noctalia_plugins:
+  # Plugin upstream (dal repo noctalia-dev/noctalia-plugins)
+  - polkit-agent
+  - model-usage
+  - privacy-indicator
+  - screen-recorder
+  - slowbongo            # richiede pacman 'evtest' + gruppo 'input' (vedi sotto)
+  - keybind-cheatsheet   # auto-detect Niri/Hyprland, parsa bindings, panel cheatsheet
+  - ip-monitor           # monitora IP pubblico / locale
+  - clipper              # clipboard history (rimpiazza sticky-notes, più completo)
+  - mini-docker          # widget bar: lista container Docker (status, start/stop)
+  - screen-toolkit       # color picker/OCR/recorder/QR — deps in pacman.apps (grim, slurp, tesseract, ecc.)
+  - usb-drive-manager    # mount/unmount/eject drives USB — deps: udisks2, ntfs-3g (in pacman.apps)
+  # Plugin custom locali (in dot_config/noctalia/plugins/<name>/) — sourceUrl vuoto
+  - permissions-toggles  # toggle sudo/keyring/autologin/abbreviations/faillock da bar
+
+# ─── Servizi systemd da abilitare ─────────────────────────────────
+# NB: sshd NON è qui — gestito via toggle .env (SSHD_ENABLED) nello script 90-services
+# Per VM: aggiungi libvirt + qemu-base + virt-manager a pacman.containers,
+# poi rimetti "libvirtd" qui sotto (lo script tollera service mancanti comunque).
+services:
+  system:
+    - docker      # docker.service (utente già nel gruppo via groups.docker)
+  user: []
+
+# ─── Gruppi utente ────────────────────────────────────────────────
+groups:
+  - libvirt
+  - i2c               # per ddcutil DDC/CI
+  - docker
+  - input             # per leggere /dev/input/event* (slowbongo + altri tool evtest)

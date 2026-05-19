@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Servizi systemd, gruppi utente, ssh+ufw.
+# NB: shell di default = fish (default della spin CachyOS-Niri-Noctalia), no chsh.
+set -euo pipefail
+
+# Servizi system (sshd gestito a parte sotto via flag).
+# Tolleriamo service mancanti (es. libvirt non installato) E start failure
+# (frequente post system upgrade pre reboot: kernel modules per il running
+# kernel possono mancare se /lib/modules/$(uname -r) è stato sostituito).
+{{ range .services.system -}}
+if systemctl list-unit-files {{ . }}.service >/dev/null 2>&1; then
+    sudo systemctl enable {{ . }}.service
+    if ! sudo systemctl start {{ . }}.service 2>&1; then
+        echo "⚠  {{ . }}.service: enable OK, start fallito — probabile reboot necessario (post system upgrade)"
+    fi
+else
+    echo "⚠  {{ . }}.service non installato, skip"
+fi
+{{ end }}
+
+# sshd toggle — gestito da .sshd_enabled (flag .env, switchabile da plugin Noctalia)
+# ufw gestisce il firewall su CachyOS (wrapper di nftables/iptables sotto)
+{{ if .sshd_enabled -}}
+echo "→ Enable sshd.service + ufw allow ssh"
+sudo systemctl enable --now sshd.service
+if command -v ufw >/dev/null 2>&1; then
+    sudo ufw allow ssh
+    sudo ufw --force enable
+    sudo systemctl enable --now ufw.service
+fi
+{{- else -}}
+echo "→ Disable sshd.service (sshd_enabled=false)"
+sudo systemctl disable --now sshd.service 2>/dev/null || true
+if command -v ufw >/dev/null 2>&1; then
+    sudo ufw delete allow ssh 2>/dev/null || true
+fi
+{{- end }}
+
+# Gruppi utente
+{{ range .groups -}}
+if ! getent group {{ . }} >/dev/null 2>&1; then
+  sudo groupadd {{ . }}
+fi
+sudo usermod -aG {{ . }} "$USER"
+{{ end }}
+
+# i2c-dev module per ddcutil DDC/CI
+echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf >/dev/null
+sudo modprobe i2c-dev || true
+
+# Sudoers NOPASSWD per ddcutil (DDC/CI senza prompt)
+sudo tee /etc/sudoers.d/ddcutil >/dev/null <<EOF
+$USER ALL=(root) NOPASSWD: /usr/bin/ddcutil
+EOF
+sudo chmod 0440 /etc/sudoers.d/ddcutil
+
+# Udev rule per /dev/i2c-*
+sudo tee /etc/udev/rules.d/45-ddcutil-i2c.rules >/dev/null <<'EOF'
+KERNEL=="i2c-[0-9]*", GROUP="i2c", MODE="0660"
+EOF
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=i2c-dev --action=change
+
+echo "✓ Servizi abilitati. Per gruppi attivi serve relogin (o newgrp)."
+
+# ─── Servizi systemd USER (theme sync Noctalia) ──────────────────────────
+# Path unit watcha ~/.config/noctalia/settings.json → triggera oneshot sync.
+# Necessario perché systemd --user è long-running e non eredita env nuove,
+# ma può comunque eseguire unit user nuove via systemctl --user daemon-reload.
+systemctl --user daemon-reload 2>/dev/null || true
+if systemctl --user list-unit-files noctalia-theme-sync.path >/dev/null 2>&1; then
+    systemctl --user enable --now noctalia-theme-sync.path 2>/dev/null || true
+    # Run once initially to sync current state
+    systemctl --user start noctalia-theme-sync.service 2>/dev/null || true
+    echo "→ noctalia-theme-sync.path enabled (watch settings.json → propaga GTK)"
+fi

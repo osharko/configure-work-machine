@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# Sync SSH + git identities multiple da vault 1Password.
+#
+# ─── Layout filesystem ────────────────────────────────────────────────────
+# ~/.ssh/<vault>/
+#     ├── <ssh-key-item>.pub      (0644)
+#     ├── <ssh-key-item>          (0600, private)
+#     └── config                  (0644, da _ssh.config)
+#     └── <child-vault>/          (ricorsione via _ssh.vaults)
+#         ├── …
+#
+# ~/.gitconfig.d/<vault>.gitconfig    [user] email/name da Identity
+#
+# ─── Schema 1Password (per vault) ─────────────────────────────────────────
+# - SSH Key items (schema rigido 1P)  → pub + priv su disco
+# - Identity (Login)                  → ~/.gitconfig.d/<vault>.gitconfig
+# - _ssh (Secure Note, opzionale)     → config + ricorsione cross-vault
+#
+# Private keys: deployate da 1P (per CLI/git senza agent). Il 1P SSH agent
+# può comunque servirle se vault è in ~/.config/1Password/ssh/agent.toml.
+{{- if and (eq .vault_provider "1password") .ssh_extra_identities }}
+set -euo pipefail
+
+SSH_ROOT="$HOME/.ssh"
+GIT_D="$HOME/.gitconfig.d"
+mkdir -p "$SSH_ROOT" "$GIT_D"
+chmod 0700 "$SSH_ROOT"
+
+if ! command -v op >/dev/null 2>&1 || ! op account list 2>/dev/null | tail -n +2 | grep -q .; then
+    echo "⚠  op non disponibile o non loggato — skip ssh-identities" >&2
+    exit 0
+fi
+
+slugify() {
+    echo "$1" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' \
+        | tr -dc 'a-z0-9-' | tr -s '-' | sed 's/^-//;s/-$//'
+}
+
+declare -A SEEN
+TOTAL_PUB=0
+TOTAL_PRIV=0
+TOTAL_CONF=0
+TOTAL_GIT=0
+
+process_vault() {
+    local vault="$1" parent_dir="$2"
+    [ -n "${SEEN[$vault]:-}" ] && return 0
+    SEEN[$vault]=1
+
+    local v vdir
+    v=$(slugify "$vault")
+    vdir="$parent_dir/$v"
+    mkdir -p "$vdir"
+    chmod 0700 "$vdir"
+    echo "── vault: $vault → $vdir ──"
+
+    # 1) SSH Key items: pub (0644) + priv (0600)
+    local titles
+    titles=$(op item list --vault "$vault" --categories "SSH Key" --format=json 2>/dev/null \
+              | jq -r '.[].title' 2>/dev/null || true)
+
+    if [ -n "$titles" ]; then
+        while IFS= read -r title; do
+            [ -z "$title" ] && continue
+            local t PUB PRIV
+            t=$(slugify "$title")
+            # 1P SSH Key: field names dipendono dal locale 1P (IT: "chiave privata").
+            # Tentiamo nome EN canonico → fallback locale italiano.
+            PUB=$(op read "op://$vault/$title/public key" 2>/dev/null \
+                  || op read "op://$vault/$title/chiave pubblica" 2>/dev/null || true)
+            PRIV=$(op read "op://$vault/$title/private key" 2>/dev/null \
+                   || op read "op://$vault/$title/chiave privata" 2>/dev/null || true)
+            if [ -n "$PUB" ]; then
+                printf '%s\n' "$PUB" > "$vdir/$t.pub"
+                chmod 0644 "$vdir/$t.pub"
+                echo "  → $vdir/$t.pub"
+                TOTAL_PUB=$((TOTAL_PUB+1))
+            fi
+            if [ -n "$PRIV" ]; then
+                printf '%s\n' "$PRIV" > "$vdir/$t"
+                chmod 0600 "$vdir/$t"
+                echo "  → $vdir/$t (priv)"
+                TOTAL_PRIV=$((TOTAL_PRIV+1))
+            fi
+        done <<< "$titles"
+    fi
+
+    # 2) _ssh secure note: config + recursion
+    local CFG REFS
+    CFG=$(op read "op://$vault/_ssh/config" 2>/dev/null || true)
+    if [ -n "$CFG" ]; then
+        printf '%s\n' "$CFG" > "$vdir/config"
+        chmod 0644 "$vdir/config"
+        echo "  → $vdir/config"
+        TOTAL_CONF=$((TOTAL_CONF+1))
+    fi
+
+    # 3) Identity (Login): genera ~/.gitconfig.d/<vault>.gitconfig
+    local GIT_EMAIL GIT_USER
+    GIT_EMAIL=$(op read "op://$vault/Identity/Email" 2>/dev/null || true)
+    GIT_USER=$(op read "op://$vault/Identity/User" 2>/dev/null || true)
+    if [ -n "$GIT_EMAIL" ] || [ -n "$GIT_USER" ]; then
+        local gcfg="$GIT_D/$v.gitconfig"
+        {
+            echo "# Auto-generato da 46-ssh-identities (vault: $vault)"
+            echo "[user]"
+            [ -n "$GIT_EMAIL" ] && echo "    email = $GIT_EMAIL"
+            [ -n "$GIT_USER" ]  && echo "    name = $GIT_USER"
+        } > "$gcfg"
+        chmod 0644 "$gcfg"
+        echo "  → $gcfg"
+        TOTAL_GIT=$((TOTAL_GIT+1))
+    fi
+
+    # 4) Ricorsione (nested sotto $vdir)
+    REFS=$(op read "op://$vault/_ssh/vaults" 2>/dev/null || true)
+    if [ -n "$REFS" ]; then
+        echo "  ↪ ricorsione via _ssh.vaults = '$REFS'"
+        local IFS_OLD="$IFS"
+        IFS=','
+        for sub in $REFS; do
+            IFS="$IFS_OLD"
+            sub=$(echo "$sub" | xargs)
+            [ -n "$sub" ] && process_vault "$sub" "$vdir"
+            IFS=','
+        done
+        IFS="$IFS_OLD"
+    fi
+}
+
+EXTRA_CSV={{ .ssh_extra_identities | quote }}
+IFS=',' read -ra VAULTS <<< "$EXTRA_CSV"
+for vault in "${VAULTS[@]}"; do
+    vault=$(echo "$vault" | xargs)
+    [ -n "$vault" ] && process_vault "$vault" "$SSH_ROOT"
+done
+
+echo "✓ Sync: ${TOTAL_PUB} pub + ${TOTAL_PRIV} priv + ${TOTAL_CONF} conf + ${TOTAL_GIT} gitconfig (${#SEEN[@]} vault)"
+{{- else }}
+#!/usr/bin/env bash
+echo "ℹ  SSH_EXTRA_IDENTITIES vuoto o vault!=1password — skip"
+exit 0
+{{- end }}

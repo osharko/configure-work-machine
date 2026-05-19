@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Scarica wallpaper: auto-detect Wallhaven ID vs URL diretto.
+#
+# Uso:
+#   wallhaven-download <id_or_url> [<id_or_url> ...]
+#   wallhaven-download --list <file>  # un ID/URL per riga (# = commento)
+#
+# Riconoscimento:
+#   - arg che inizia con http(s):// → download diretto via curl, filename = basename URL
+#   - tutto il resto → trattato come Wallhaven ID, lookup via API per URL reale
+#
+# Output: $WALLHAVEN_DEST/<fname>   (default WALLHAVEN_DEST=~/Pictures/Wallpapers)
+
+set -euo pipefail
+
+DEST="${WALLHAVEN_DEST:-$HOME/Pictures/Wallpapers}"
+mkdir -p "$DEST"
+
+download_url() {
+    local url="$1"
+    local fname
+    fname=$(basename "${url%%\?*}")  # strip query string
+    [ -z "$fname" ] && { echo "  ✗ URL senza nome file: $url" >&2; return 1; }
+    local out="$DEST/$fname"
+    if [ -f "$out" ]; then
+        echo "  ok url → $fname (già presente)"
+        return 0
+    fi
+    if curl -fsSL --user-agent 'Mozilla/5.0' -o "$out" "$url"; then
+        local size
+        size=$(du -h "$out" | cut -f1)
+        echo "  → url → $fname ($size)"
+    else
+        echo "  ✗ $url — download fail" >&2
+        rm -f "$out"
+        return 1
+    fi
+}
+
+download_id() {
+    local id="$1"
+    local info
+    info=$(curl -fsS "https://wallhaven.cc/api/v1/w/$id" 2>/dev/null) || {
+        echo "  ✗ $id — API fail" >&2
+        return 1
+    }
+    local path
+    path=$(echo "$info" | jq -r '.data.path // empty')
+    if [ -z "$path" ]; then
+        echo "  ✗ $id — non trovato" >&2
+        return 1
+    fi
+    local fname
+    fname=$(basename "$path")
+    local out="$DEST/$fname"
+    if [ -f "$out" ]; then
+        echo "  ok $id → $fname (già presente)"
+        return 0
+    fi
+    if curl -fsSL -o "$out" "$path"; then
+        local size
+        size=$(du -h "$out" | cut -f1)
+        echo "  → $id → $fname ($size)"
+    else
+        echo "  ✗ $id — download fail" >&2
+        rm -f "$out"
+        return 1
+    fi
+}
+
+# Parse args
+ITEMS=()
+if [ "${1:-}" = "--list" ]; then
+    [ -z "${2:-}" ] && { echo "Uso: $0 --list <file>" >&2; exit 2; }
+    while read -r line; do
+        line="${line%%#*}"
+        line="$(echo "$line" | xargs)"   # trim
+        [ -n "$line" ] && ITEMS+=("$line")
+    done < "$2"
+else
+    ITEMS=("$@")
+fi
+
+[ ${#ITEMS[@]} -eq 0 ] && { echo "Uso: $0 <id_or_url> [...]  oppure  $0 --list <file>" >&2; exit 2; }
+
+echo "── Wallpaper download: ${#ITEMS[@]} item → $DEST ──"
+for item in "${ITEMS[@]}"; do
+    case "$item" in
+        http://*|https://*) download_url "$item" || true ;;
+        *)                  download_id  "$item" || true ;;
+    esac
+done
+echo "✓ Download completo"

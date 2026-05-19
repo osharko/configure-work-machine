@@ -1,0 +1,43 @@
+{{- if .has_fingerprint -}}
+#!/usr/bin/env bash
+# Setup fingerprint reader (Dell Pro Max 16, Broadcom CV3+).
+# - libfprint-tod sostituisce libfprint (conflitto)
+# - driver Broadcom da AUR (gestito in run_onchange_before_20-aur)
+# - PAM: sudo + system-local-login (login tty / SDDM / Noctalia LockScreen
+#   passano tutti per system-local-login → system-login → system-auth)
+# Eseguito SOLO se .has_fingerprint == true.
+set -euo pipefail
+
+# 1. Rimuovi libfprint base se presente (conflitto con libfprint-tod)
+if pacman -Q libfprint &>/dev/null; then
+  sudo pacman -Rn --noconfirm libfprint || true
+fi
+
+# 2. Verifica device
+if ! sudo fprintd-list "$USER" >/dev/null 2>&1; then
+  echo "⚠  fprintd non risponde. Verifica con: lsusb | grep 0a5c:5865"
+fi
+
+# 3. PAM (idempotente con marker)
+PAM_MARKER="# managed-by-chezmoi"
+
+apply_pam() {
+  local file="$1" line="$2"
+  if [ -f "$file" ] && ! grep -q "$PAM_MARKER" "$file"; then
+    sudo sed -i "1i ${line}  ${PAM_MARKER}" "$file"
+    echo "→ PAM patched: $file"
+  fi
+}
+
+# sudo: fingerprint come alternativa alla password
+apply_pam /etc/pam.d/sudo  "auth sufficient pam_fprintd.so timeout=10"
+
+# system-local-login: copre login tty + greeter + Noctalia lock (LockContext
+# usa Quickshell.Services.Pam che probe-a "login" come fallback)
+apply_pam /etc/pam.d/system-local-login "auth sufficient pam_fprintd.so"
+
+# polkit: stessa stack di sudo
+[ -e /etc/pam.d/polkit-1 ] || sudo ln -s /etc/pam.d/sudo /etc/pam.d/polkit-1
+
+echo "✓ Fingerprint setup. Per enrollare: fprintd-enroll"
+{{- end -}}

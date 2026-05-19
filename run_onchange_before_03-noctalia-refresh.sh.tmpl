@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Refresh Noctalia settings.json + plugins.json:
+# - quando i template del repo cambiano (hash trigger)
+# - OPPURE quando il file live differisce dal template renderizzato (Noctalia
+#   ha auto-aggiunto widget o l'utente ha tweakato via UI cose che vorremmo
+#   far prevalere dal repo)
+#
+# Razionale: `create_settings.json.tmpl` ha il prefisso `create_` che IMPEDISCE
+# overwrite ad ogni apply. Necessario per non perdere tweak utente fra apply.
+# Ma per riproducibilità (bar identica fra macchine, plugin nuovi nella posa
+# giusta), serve un meccanismo "refresh on drift". Questo script lo fa:
+# - confronta live vs template renderizzato a OGNI apply
+# - se differiscono → backup + rm → chezmoi al file-copy step lo ricrea
+#
+# Trade-off: il backup contiene tutte le tweak UI dell'utente. Restore manuale
+# via UI Noctalia o jq merge se servono.
+#
+# Hash trigger (cambia se uno dei template cambia):
+#   settings:  {{ include "dot_config/noctalia/create_settings.json.tmpl" | sha256sum }}
+#   plugins:   {{ include "dot_config/noctalia/plugins.json.tmpl" | sha256sum }}
+{{- if not .noctalia_force_refresh }}
+echo "→ NOCTALIA_FORCE_REFRESH=false → skip refresh (live preservato)"
+exit 0
+{{- else }}
+set -euo pipefail
+
+NOCTALIA_DIR="$HOME/.config/noctalia"
+TS=$(date +%s)
+
+# Confronto live vs template (entrambi normalizzati con jq -S per ordine
+# chiavi stabile; quindi il diff cattura SOLO cambi semantici, non whitespace
+# o riordini di chiavi).
+diff_normalized() {
+    local live="$1" rendered="$2"
+    [ -f "$live" ] || return 1  # live mancante = serve creare → trattalo come "diff"
+    if ! diff -q <(jq -S '.' "$live" 2>/dev/null) <(jq -S '.' "$rendered" 2>/dev/null) >/dev/null 2>&1; then
+        return 1  # differiscono
+    fi
+    return 0  # uguali
+}
+
+REPO_DIR={{ .chezmoi.sourceDir | quote }}
+for f in settings.json plugins.json; do
+    LIVE="$NOCTALIA_DIR/$f"
+    TEMPLATE_FILE=""
+    case "$f" in
+        settings.json) TEMPLATE_FILE="$REPO_DIR/dot_config/noctalia/create_settings.json.tmpl" ;;
+        plugins.json)  TEMPLATE_FILE="$REPO_DIR/dot_config/noctalia/plugins.json.tmpl" ;;
+    esac
+    [ -f "$TEMPLATE_FILE" ] || continue
+
+    RENDERED=$(mktemp)
+    chezmoi execute-template < "$TEMPLATE_FILE" > "$RENDERED" 2>/dev/null || { rm -f "$RENDERED"; continue; }
+
+    if diff_normalized "$LIVE" "$RENDERED"; then
+        echo "  ok $f (live == template, no refresh)"
+    elif [ -f "$LIVE" ]; then
+        BACKUP="${LIVE}.bak.${TS}"
+        mv "$LIVE" "$BACKUP"
+        echo "→ $f: live ≠ template → backup in ${BACKUP##*/}"
+    fi
+    rm -f "$RENDERED"
+done
+
+echo "✓ Noctalia refresh completo (file mancanti verranno ricreati al file-copy step)"
+{{- end }}

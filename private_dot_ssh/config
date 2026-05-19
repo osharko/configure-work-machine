@@ -1,0 +1,14 @@
+# SSH config modulare in 3 livelli:
+#   1) ~/.ssh/config.d/*.conf            — host generici (LAN, github, …)
+#   2) ~/.ssh/<vault>/config             — per-vault da _ssh.config
+#   3) ~/.ssh/<vault>/<sub-vault>/config — ricorsione cross-vault (un livello)
+# ssh non supporta glob ricorsivo (`**`), perciò gli Include sono espliciti.
+Include ~/.ssh/config.d/*.conf
+Include ~/.ssh/*/config
+Include ~/.ssh/*/*/config
+
+Host *
+    IdentityAgent ~/.1password/agent.sock
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    ServerAliveInterval 60

@@ -1,0 +1,109 @@
+// ──────────────────────────────────────────────────────────────────────────
+// Omarchy → Niri keybindings (subset essenziali tradotti)
+//
+// Da includere nel tuo ~/.config/niri/config.kdl dentro il blocco binds { ... }
+// La sintassi Niri NON supporta "include" → copia-incolla quello che ti serve.
+//
+// I comandi `omarchy-*` non sono disponibili su CachyOS-Niri: dove possibile
+// li ho rimpiazzati con equivalenti diretti (es. nautilus al posto di
+// omarchy-launch-walker per file manager). Le cose troppo omarchy-specifiche
+// sono marcate TODO.
+// ──────────────────────────────────────────────────────────────────────────
+
+binds {
+    // ─── Application launchers ────────────────────────────────────────────
+    Mod+Return        { spawn "alacritty"; }
+    Mod+Alt+Return    { spawn "alacritty" "-e" "tmux" "new"; }
+    Mod+Shift+Return  { spawn "brave"; }              // o "firefox"
+    Mod+Shift+F       { spawn "nautilus" "--new-window"; }
+    Mod+Shift+B       { spawn "brave"; }
+    Mod+Shift+M       { spawn "spotify"; }
+    Mod+Shift+N       { spawn "alacritty" "-e" "nvim"; }
+    Mod+Shift+T       { spawn "alacritty" "-e" "btop"; }
+    Mod+Shift+D       { spawn "alacritty" "-e" "lazydocker"; }
+    Mod+Shift+G       { spawn "signal-desktop"; }
+    Mod+Shift+O       { spawn "obsidian"; }
+    Mod+Shift+W       { spawn "typora"; }
+    Mod+Shift+Slash   { spawn "1password"; }
+
+    // ─── Window management (focus) ────────────────────────────────────────
+    Mod+Left          { focus-column-left; }
+    Mod+Right         { focus-column-right; }
+    Mod+Up            { focus-window-up; }
+    Mod+Down          { focus-window-down; }
+
+    // ─── Window management (move/swap) ────────────────────────────────────
+    Mod+Shift+Left    { move-column-left; }
+    Mod+Shift+Right   { move-column-right; }
+    Mod+Shift+Up      { move-window-up; }
+    Mod+Shift+Down    { move-window-down; }
+
+    // ─── Window state ─────────────────────────────────────────────────────
+    Mod+W             { close-window; }
+    Mod+F             { maximize-column; }
+    Mod+Shift+F       { fullscreen-window; }    // override del browser sopra → vedi
+    Mod+T             { toggle-window-floating; }
+
+    // ─── Workspaces ───────────────────────────────────────────────────────
+    Mod+1             { focus-workspace 1; }
+    Mod+2             { focus-workspace 2; }
+    Mod+3             { focus-workspace 3; }
+    Mod+4             { focus-workspace 4; }
+    Mod+5             { focus-workspace 5; }
+    Mod+6             { focus-workspace 6; }
+    Mod+7             { focus-workspace 7; }
+    Mod+8             { focus-workspace 8; }
+    Mod+9             { focus-workspace 9; }
+
+    Mod+Shift+1       { move-column-to-workspace 1; }
+    Mod+Shift+2       { move-column-to-workspace 2; }
+    Mod+Shift+3       { move-column-to-workspace 3; }
+    Mod+Shift+4       { move-column-to-workspace 4; }
+    Mod+Shift+5       { move-column-to-workspace 5; }
+    Mod+Shift+6       { move-column-to-workspace 6; }
+    Mod+Shift+7       { move-column-to-workspace 7; }
+    Mod+Shift+8       { move-column-to-workspace 8; }
+    Mod+Shift+9       { move-column-to-workspace 9; }
+
+    Mod+Tab           { focus-workspace-down; }
+    Mod+Shift+Tab     { focus-workspace-up; }
+
+    // ─── Media keys ───────────────────────────────────────────────────────
+    XF86AudioRaiseVolume      allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume      allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute             allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioMicMute          allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    XF86AudioPlay             allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioPause            allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioNext             allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPrev             allow-when-locked=true { spawn "playerctl" "previous"; }
+
+    // ─── Brightness (DDC/CI per monitor esterni; fallback al backlight interno) ─
+    XF86MonBrightnessUp       allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
+    XF86MonBrightnessDown     allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+
+    // ─── Screenshots ──────────────────────────────────────────────────────
+    Print                     { screenshot; }
+    Mod+Print                 { screenshot-screen; }
+    Alt+Print                 { screenshot-window; }
+
+    // ─── System ───────────────────────────────────────────────────────────
+    Mod+Ctrl+L                { spawn "loginctl" "lock-session"; }
+
+    // ─── Niri-specifici (Noctalia) ────────────────────────────────────────
+    Mod+Space                 { spawn "noctalia-shell" "ipc" "call" "appLauncherToggle"; }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // TODO — bindings omarchy-* da decidere come tradurre:
+    //   omarchy-menu                  → menu unificato (potenziale plugin Noctalia)
+    //   omarchy-launch-walker         → walker (AUR pkg, oppure rofi/fuzzel)
+    //   omarchy-launch-webapp         → wrapper Chromium app mode
+    //   omarchy-system-lock           → hyprlock o swaylock
+    //   omarchy-toggle-nightlight     → wlsunset/hyprsunset toggle
+    //   omarchy-cmd-terminal-cwd      → kitty/alacritty con --working-directory
+    //   omarchy-launch-audio/bluetooth/wifi → equivalenti GNOME/Noctalia
+    //
+    // Vedi omarchy-reference/{bindings,utilities,tiling-v2,media,clipboard}.conf
+    // per il dump completo.
+    // ──────────────────────────────────────────────────────────────────────
+}

@@ -1,0 +1,51 @@
+{{- if .passwordless_sudo -}}
+#!/usr/bin/env bash
+# Sudoers passwordless per $USER.
+# Abilitato SOLO se .passwordless_sudo == true (vedi config.env / basic-config.sh).
+# Raccomandazione: usare solo se il disco è cifrato (LUKS), altrimenti
+# qualunque processo locale può ottenere root senza prompt.
+set -euo pipefail
+
+DROPIN=/etc/sudoers.d/99-chezmoi-nopasswd
+LEGACY=/etc/sudoers.d/10-chezmoi-nopasswd
+# `!authenticate` per l'utente è critico: senza, `sudo -v` (validate, no command)
+# chiede password ANCHE con NOPASSWD: ALL — perché NOPASSWD matcha i comandi,
+# non l'azione di validate. Conseguenza pratica: `paru --sudoloop` (usato dallo
+# script 10-packages) si bloccava in attesa di TTY durante i refresh periodici.
+read -r -d '' CONTENT <<EOF || true
+Defaults:$USER !authenticate
+$USER ALL=(ALL) NOPASSWD: ALL
+EOF
+
+# Cleanup legacy 10- (sovrascritto dal 10-installer di CachyOS per ordine alfabetico)
+if [ -f "$LEGACY" ]; then
+    echo "→ Rimuovo drop-in legacy: $LEGACY (sostituito da 99-)"
+    sudo rm -f "$LEGACY"
+fi
+
+# Idempotente: confronta contenuto totale
+EXISTING=$(sudo cat "$DROPIN" 2>/dev/null || echo "")
+if [ "$EXISTING" = "$CONTENT" ]; then
+  echo "✓ sudo NOPASSWD già configurato (incl. !authenticate)"
+  exit 0
+fi
+
+echo "→ Configurazione sudo NOPASSWD + !authenticate per $USER"
+echo "$CONTENT" | sudo tee "$DROPIN" >/dev/null
+sudo chmod 0440 "$DROPIN"
+# visudo -c per validare la sintassi
+sudo visudo -cf "$DROPIN" >/dev/null
+echo "✓ sudo NOPASSWD attivo (drop-in: $DROPIN)"
+{{- else -}}
+#!/usr/bin/env bash
+# Sudo passwordless disabilitato (.passwordless_sudo = false).
+DROPIN=/etc/sudoers.d/99-chezmoi-nopasswd
+LEGACY=/etc/sudoers.d/10-chezmoi-nopasswd
+for f in "$DROPIN" "$LEGACY"; do
+    if [ -f "$f" ]; then
+        echo "→ Rimuovo drop-in passwordless precedente: $f"
+        sudo rm -f "$f"
+    fi
+done
+echo "→ passwordless_sudo=false → sudo richiede password (default)"
+{{- end -}}

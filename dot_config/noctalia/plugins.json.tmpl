@@ -1,0 +1,25 @@
+{{- /*
+   ~/.config/noctalia/plugins.json — gestito da chezmoi.
+
+   Sorgente unica di verità: la lista `noctalia_plugins` in
+   .chezmoidata/packages.yaml. Modifica lì → `chezmoi apply` rigenera.
+
+   Generato via toPrettyJson per JSON valido sempre.
+*/ -}}
+{{- $sourceUrl := "https://github.com/noctalia-dev/noctalia-plugins" -}}
+{{- /* Plugin custom locali (in dot_config/noctalia/plugins/<name>/) → sourceUrl "" */ -}}
+{{- $localPlugins := list "permissions-toggles" -}}
+{{- $states := dict -}}
+{{- range .noctalia_plugins -}}
+  {{- if has . $localPlugins -}}
+    {{- $_ := set $states . (dict "enabled" true "sourceUrl" "") -}}
+  {{- else -}}
+    {{- $_ := set $states . (dict "enabled" true "sourceUrl" $sourceUrl) -}}
+  {{- end -}}
+{{- end -}}
+{{- $out := dict
+  "sources" (list (dict "enabled" true "name" "Noctalia Plugins" "url" $sourceUrl))
+  "states"  $states
+  "version" 2
+-}}
+{{ $out | toPrettyJson }}

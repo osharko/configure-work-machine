@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Harlequin
+GenericName=SQL TUI
+Comment=Terminal SQL IDE (multi-database)
+Exec=alacritty -e harlequin
+Icon=database
+Terminal=false
+Categories=Development;Database;
+Keywords=sql;database;tui;duckdb;postgres;

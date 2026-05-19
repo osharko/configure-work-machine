@@ -1,0 +1,34 @@
+{{- if .autologin_tty -}}
+#!/usr/bin/env bash
+# Disabilita SDDM e configura autologin tty1 → niri-session.
+# Abilitato SOLO se .autologin_tty == true (vedi config.env / basic-config.sh).
+# Raccomandazione: usare solo se il disco è cifrato (LUKS), altrimenti
+# il boot offre desktop senza alcun gate di autenticazione.
+set -euo pipefail
+
+# 1. Disable SDDM (idempotente)
+if systemctl is-enabled sddm.service &>/dev/null; then
+  echo "→ Disable sddm.service"
+  sudo systemctl disable sddm.service
+fi
+
+# 2. Autologin tty1 drop-in
+DROPIN_DIR=/etc/systemd/system/getty@tty1.service.d
+DROPIN_FILE="$DROPIN_DIR/autologin.conf"
+if [ ! -f "$DROPIN_FILE" ]; then
+  echo "→ Setup autologin getty@tty1 → $USER"
+  sudo mkdir -p "$DROPIN_DIR"
+  sudo tee "$DROPIN_FILE" >/dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --noclear --autologin $USER %I \$TERM
+EOF
+  sudo systemctl daemon-reload
+fi
+
+echo "✓ Autologin niri configurato (effettivo al prossimo reboot)"
+{{- else -}}
+#!/usr/bin/env bash
+# Autologin disabilitato (.autologin_tty = false). SDDM resta enabled.
+echo "→ autologin_tty=false → autologin tty1 NON configurato (SDDM resta attivo)"
+{{- end -}}

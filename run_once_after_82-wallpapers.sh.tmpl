@@ -1,0 +1,24 @@
+{{- if .download_wallpapers -}}
+#!/usr/bin/env bash
+# Scarica i wallpaper riproducibili definiti in .chezmoidata/wallpapers.yaml.
+# Gated da .download_wallpapers in .env. Skip totale se false.
+set -euo pipefail
+
+WALL_ROOT="$HOME/Pictures/Wallpapers"
+
+{{ range $theme, $items := .wallpapers }}
+echo "── Tema: {{ $theme }} ──"
+mkdir -p "$WALL_ROOT/{{ $theme }}"
+items=(
+{{- range $items }}
+    {{ . | quote }}
+{{- end }}
+)
+WALLHAVEN_DEST="$WALL_ROOT/{{ $theme }}" wallhaven-download "${items[@]}"
+{{ end }}
+
+echo "✓ Wallpaper riproducibili scaricati"
+{{- else -}}
+#!/usr/bin/env bash
+echo "→ DOWNLOAD_WALLPAPERS=false → skip download wallpaper"
+{{- end -}}

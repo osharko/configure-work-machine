@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# paru wrapper che espone le toolchain di mise come "assume-installed".
+# Evita doppia installazione (mise + pacman) quando un pkg richiede
+# java-runtime/nodejs/python/go/rust come dipendenza.
+#
+# Uso: stesso di `paru` (passa tutti gli args).
+#   paru-mise -S nome-pkg
+#   paru-mise -Syu
+#
+# Mapping tool mise → dep pacman:
+#   java   → java-runtime, java-environment, jre-openjdk, jdk-openjdk
+#   node   → nodejs
+#   python → python
+#   go     → go
+#   rust   → rust, rustup, cargo
+set -euo pipefail
+
+ASSUME=()
+
+if command -v mise >/dev/null 2>&1; then
+    # mise current → "tool version source" per ogni tool attivo
+    while IFS=$' \t' read -r tool version _; do
+        [ -z "$tool" ] && continue
+        # Estrai solo major version (es. "temurin-21.0.5" → "21")
+        major=$(echo "$version" | grep -oE '^[a-z]*-?[0-9]+' | grep -oE '[0-9]+$' || echo "$version" | cut -d. -f1)
+
+        case "$tool" in
+            java)
+                ASSUME+=("--assume-installed=java-runtime=$major")
+                ASSUME+=("--assume-installed=java-environment=$major")
+                ASSUME+=("--assume-installed=jre-openjdk=$major")
+                ASSUME+=("--assume-installed=jdk-openjdk=$major")
+                ;;
+            node)
+                ASSUME+=("--assume-installed=nodejs=$major")
+                ASSUME+=("--assume-installed=npm")
+                ;;
+            python)
+                ASSUME+=("--assume-installed=python=$version")
+                ;;
+            go)
+                ASSUME+=("--assume-installed=go=$version")
+                ;;
+            rust)
+                ASSUME+=("--assume-installed=rust=$version")
+                ASSUME+=("--assume-installed=cargo")
+                ;;
+        esac
+    done < <(mise current 2>/dev/null || true)
+fi
+
+# Filtra mise (shims + installs) dal PATH: i PKGBUILD AUR Python/Node fanno
+# `python -m build` o `npm install` e si installano nel prefix del binario che
+# trovano in PATH. Se è quello di mise (~/.local/share/mise/installs/...),
+# collidono con i file gestiti da mise. Forzando il PATH a /usr/bin, makepkg
+# usa il python di sistema. Gli --assume-installed sopra evitano comunque che
+# paru installi runtime duplicati da pacman.
+CLEAN_PATH=$(echo "$PATH" | tr ':' '\n' \
+    | grep -vE 'mise/(installs|shims)|\.local/share/mise' \
+    | tr '\n' ':' | sed 's/:$//')
+
+exec env PATH="$CLEAN_PATH" paru "${ASSUME[@]}" "$@"

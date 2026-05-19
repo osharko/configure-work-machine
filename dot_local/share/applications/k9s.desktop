@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=K9s
+GenericName=Kubernetes TUI
+Comment=Terminal UI to interact with Kubernetes clusters
+Exec=alacritty -e k9s
+Icon=applications-system
+Terminal=false
+Categories=Development;System;
+Keywords=kubernetes;k8s;tui;cluster;

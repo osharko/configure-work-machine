@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Setta i default xdg-mime per applicazioni preferite:
+# - Brave: browser http/https/html
+# - VSCodium: editor text/plain e source code
+# - Nautilus: file manager (default)
+# - mpv: media
+# - imv: immagini
+# - evince: pdf
+set -euo pipefail
+
+# Helper: setta default solo se l'app è installata
+set_default() {
+    local desktop="$1"; shift
+    local mimes=("$@")
+    if [ ! -f "/usr/share/applications/$desktop" ] \
+    && [ ! -f "$HOME/.local/share/applications/$desktop" ]; then
+        return  # app non installata
+    fi
+    for mime in "${mimes[@]}"; do
+        xdg-mime default "$desktop" "$mime" 2>/dev/null || true
+    done
+}
+
+# Browser → Brave
+set_default brave-browser.desktop \
+    x-scheme-handler/http x-scheme-handler/https x-scheme-handler/ftp \
+    text/html application/xhtml+xml
+
+# Editor distribuiti per tipologia:
+#   - VSCodium: codice (Python/C/C++/Java/Go/Rust/shell/JSON/XML/YAML/TOML/JS/TS)
+#   - Typora:   markdown
+#   - Sublime:  testi generici (plain, makefile, log, csv, ini, conf)
+set_default codium.desktop \
+    text/x-python text/x-c text/x-c++ text/x-csrc text/x-chdr \
+    text/x-java text/x-go text/x-rust text/x-shellscript \
+    application/json application/xml application/javascript \
+    application/x-yaml text/x-yaml application/toml text/x-toml \
+    text/x-sass text/x-scss text/css text/html text/x-php text/x-ruby \
+    application/x-shellscript text/x-cmake text/x-dockerfile
+
+set_default typora.desktop \
+    text/markdown text/x-markdown
+
+set_default sublime_text.desktop \
+    text/plain text/x-makefile text/x-log text/csv \
+    text/x-readme text/x-ini text/x-conf
+
+# File manager → Nautilus (default GNOME)
+set_default org.gnome.Nautilus.desktop inode/directory
+
+# PDF → Evince
+set_default org.gnome.Evince.desktop application/pdf
+
+# Immagini → imv-folder (wrapper che apre tutta la cartella + scorrimento n/p).
+# Il .desktop entry vive in dot_local/share/applications/imv-folder.desktop e
+# chiama lo script dot_local/bin/executable_imv-folder.
+set_default imv-folder.desktop \
+    image/jpeg image/png image/webp image/gif image/svg+xml image/x-portable-pixmap \
+    image/bmp image/tiff
+
+# Video/audio → mpv
+set_default mpv.desktop \
+    video/mp4 video/mkv video/webm video/quicktime audio/mpeg audio/flac audio/ogg
+
+# Vim → Neovim symlink (richiede sudo, idempotente)
+if command -v nvim >/dev/null 2>&1 && [ ! -L /usr/local/bin/vim ]; then
+    sudo ln -sf /usr/bin/nvim /usr/local/bin/vim 2>/dev/null || true
+    sudo ln -sf /usr/bin/nvim /usr/local/bin/vi 2>/dev/null || true
+fi
+
+echo "✓ Default apps configurati (brave/codium/nvim/nautilus/evince/imv/mpv)"

@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+# system-toggle: gestore stato per il plugin Noctalia "system-toggles"
+#
+# Uso:
+#   system-toggle status <name>    → stampa "on" o "off"
+#   system-toggle on    <name>     → abilita (può richiedere pkexec)
+#   system-toggle off   <name>     → disabilita
+#
+# Nomi supportati:
+#   passwordless-sudo       → /etc/sudoers.d/99-chezmoi-nopasswd (pkexec)
+#   sudoless-abbreviations  → ~/.config/fish/conf.d/sudoless.fish (no priv)
+#   autologin-tty           → /etc/systemd/system/getty@tty1.service.d/autologin.conf (read-only via chezmoi)
+#   keyring-no-password     → ~/.local/share/keyrings/login.keyring (read-only via chezmoi)
+
+set -euo pipefail
+
+ACTION="${1:-}"
+NAME="${2:-}"
+
+if [ -z "$ACTION" ] || [ -z "$NAME" ]; then
+    echo "Usage: system-toggle <status|on|off> <name>" >&2
+    exit 2
+fi
+
+# ─── Helpers ────────────────────────────────────────────────────────────────
+status_passwordless_sudo() {
+    sudo -n true 2>/dev/null && echo on || echo off
+}
+
+status_sudoless_abbreviations() {
+    [ -f "$HOME/.config/fish/conf.d/sudoless.fish" ] && echo on || echo off
+}
+
+status_autologin_tty() {
+    [ -f /etc/systemd/system/getty@tty1.service.d/autologin.conf ] && echo on || echo off
+}
+
+status_keyring_no_password() {
+    local f="$HOME/.local/share/keyrings/login.keyring"
+    [ -f "$f" ] && ! head -c 8 "$f" 2>/dev/null | grep -q '^GnomeKey' && echo on || echo off
+}
+
+# ─── Actions ────────────────────────────────────────────────────────────────
+on_passwordless_sudo() {
+    pkexec sh -c '
+        cat > /etc/sudoers.d/99-chezmoi-nopasswd <<EOF
+'"$USER"' ALL=(ALL) NOPASSWD: ALL
+EOF
+        chmod 0440 /etc/sudoers.d/99-chezmoi-nopasswd
+        visudo -cf /etc/sudoers.d/99-chezmoi-nopasswd
+    '
+}
+
+off_passwordless_sudo() {
+    pkexec rm -f /etc/sudoers.d/99-chezmoi-nopasswd
+}
+
+on_autologin_tty() {
+    pkexec sh -c '
+        mkdir -p /etc/systemd/system/getty@tty1.service.d
+        cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o "-p -f -- \\\\u" --noclear --autologin '"$USER"' %I \$TERM
+EOF
+        systemctl daemon-reload
+        systemctl disable sddm.service 2>/dev/null || true
+    '
+}
+
+off_autologin_tty() {
+    pkexec sh -c '
+        rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+        systemctl daemon-reload
+        systemctl enable sddm.service 2>/dev/null || true
+    '
+}
+
+status_noctalia_lock_on_boot() {
+    grep -q 'lockScreen lock' "$HOME/.config/niri/cfg/autostart.kdl" 2>/dev/null && echo on || echo off
+}
+
+on_noctalia_lock_on_boot() {
+    AUTO="$HOME/.config/niri/cfg/autostart.kdl"
+    if ! grep -q 'lockScreen lock' "$AUTO" 2>/dev/null; then
+        # Append spawn al niri autostart: dopo 2s lock Noctalia (così entra Noctalia
+        # come fosse il display manager)
+        cat >> "$AUTO" <<'EOF'
+
+    // [system-toggles] Noctalia lock al boot (workaround: niente SDDM)
+    spawn-sh-at-startup "sleep 2 && qs -c noctalia-shell ipc call lockScreen lock"
+EOF
+    fi
+}
+
+off_noctalia_lock_on_boot() {
+    AUTO="$HOME/.config/niri/cfg/autostart.kdl"
+    # Rimuove il commento + il spawn (4 righe blocco)
+    sed -i '/\[system-toggles\] Noctalia lock al boot/,/qs.*lockScreen lock/d' "$AUTO"
+    # Cleanup riga vuota orfana
+    sed -i '/^$/N;/^\n$/d' "$AUTO"
+}
+
+status_polkit_no_password() {
+    # /etc/polkit-1/rules.d/ è mode 750 (root:polkitd) → utente non può fare
+    # `[ -f ]`; usiamo sudo -n (richiede sudo NOPASSWD attivo) come fallback.
+    sudo -n test -f /etc/polkit-1/rules.d/49-wheel-nopasswd.rules 2>/dev/null && echo on || echo off
+}
+
+on_polkit_no_password() {
+    pkexec sh -c "cat > /etc/polkit-1/rules.d/49-wheel-nopasswd.rules <<'EOF'
+// Skip prompt password polkit per utenti nel gruppo wheel.
+polkit.addRule(function(action, subject) {
+    if (subject.isInGroup('wheel')) {
+        return polkit.Result.YES;
+    }
+});
+EOF
+chmod 0644 /etc/polkit-1/rules.d/49-wheel-nopasswd.rules"
+}
+
+off_polkit_no_password() {
+    pkexec rm -f /etc/polkit-1/rules.d/49-wheel-nopasswd.rules
+}
+
+status_disable_faillock() {
+    grep -qE '^deny\s*=\s*0' /etc/security/faillock.conf 2>/dev/null && echo on || echo off
+}
+
+on_disable_faillock() {
+    pkexec sh -c '
+        if grep -qE "^#?deny\s*=" /etc/security/faillock.conf; then
+            sed -i "s/^#\?deny\s*=.*/deny = 0/" /etc/security/faillock.conf
+        else
+            echo "deny = 0" >> /etc/security/faillock.conf
+        fi
+        # reset eventuali fallimenti attivi
+        faillock --user '"$USER"' --reset 2>/dev/null || true
+    '
+}
+
+off_disable_faillock() {
+    pkexec sh -c '
+        sed -i "s/^deny\s*=\s*0/# deny = 5  # restored default/" /etc/security/faillock.conf
+    '
+}
+
+on_keyring_no_password() {
+    KEYRING="$HOME/.local/share/keyrings/login.keyring"
+    DEFAULT="$HOME/.local/share/keyrings/default"
+    mkdir -p "$HOME/.local/share/keyrings"
+    chmod 0700 "$HOME/.local/share/keyrings"
+    # Backup se cifrato
+    if [ -f "$KEYRING" ] && head -c 8 "$KEYRING" 2>/dev/null | grep -q '^GnomeKey'; then
+        mv "$KEYRING" "${KEYRING}.bak.$(date +%s)"
+    fi
+    cat > "$KEYRING" <<EOF
+[keyring]
+display-name=Login
+ctime=$(date +%s)
+mtime=0
+lock-on-idle=false
+lock-after=false
+EOF
+    chmod 0600 "$KEYRING"
+    echo -n "login" > "$DEFAULT"
+    killall -HUP gnome-keyring-daemon 2>/dev/null || true
+}
+
+off_keyring_no_password() {
+    # Rimuove il keyring ASCII; al prossimo unlock gnome-keyring chiederà password
+    rm -f "$HOME/.local/share/keyrings/login.keyring"
+    killall -HUP gnome-keyring-daemon 2>/dev/null || true
+}
+
+on_sudoless_abbreviations() {
+    mkdir -p "$HOME/.config/fish/conf.d"
+    cat > "$HOME/.config/fish/conf.d/sudoless.fish" <<'EOF'
+# Auto-sudo abbreviations (managed by Noctalia system-toggles plugin)
+# Quando attivo, comandi privileged sono autopreceduti da sudo.
+# Combina con "Sudo no password" → effetto "OVH-like": digiti senza prefix sudo.
+abbr -a pacman    'sudo pacman'
+abbr -a paru      'sudo -E paru'
+abbr -a systemctl 'sudo systemctl'
+abbr -a journalctl 'sudo journalctl'
+abbr -a mount     'sudo mount'
+abbr -a umount    'sudo umount'
+abbr -a nft       'sudo nft'
+abbr -a ufw       'sudo ufw'
+abbr -a usermod   'sudo usermod'
+abbr -a groupadd  'sudo groupadd'
+abbr -a chown     'sudo chown'
+abbr -a chmod     'sudo chmod'
+abbr -a chattr    'sudo chattr'
+abbr -a ip        'sudo ip'
+abbr -a iwctl     'sudo iwctl'
+abbr -a fdisk     'sudo fdisk'
+abbr -a parted    'sudo parted'
+abbr -a btrfs     'sudo btrfs'
+abbr -a snapper   'sudo snapper'
+abbr -a fprintd-enroll 'sudo fprintd-enroll'
+EOF
+}
+
+off_sudoless_abbreviations() {
+    rm -f "$HOME/.config/fish/conf.d/sudoless.fish"
+}
+
+# ─── Dispatch ───────────────────────────────────────────────────────────────
+case "$ACTION:$NAME" in
+    status:passwordless-sudo)        status_passwordless_sudo ;;
+    status:sudoless-abbreviations)   status_sudoless_abbreviations ;;
+    status:autologin-tty)            status_autologin_tty ;;
+    status:keyring-no-password)      status_keyring_no_password ;;
+    status:noctalia-lock-on-boot)    status_noctalia_lock_on_boot ;;
+    status:disable-faillock)         status_disable_faillock ;;
+    on:passwordless-sudo)            on_passwordless_sudo ;;
+    off:passwordless-sudo)           off_passwordless_sudo ;;
+    on:sudoless-abbreviations)       on_sudoless_abbreviations ;;
+    off:sudoless-abbreviations)      off_sudoless_abbreviations ;;
+    on:autologin-tty)                on_autologin_tty ;;
+    off:autologin-tty)               off_autologin_tty ;;
+    on:keyring-no-password)          on_keyring_no_password ;;
+    off:keyring-no-password)         off_keyring_no_password ;;
+    on:noctalia-lock-on-boot)        on_noctalia_lock_on_boot ;;
+    off:noctalia-lock-on-boot)       off_noctalia_lock_on_boot ;;
+    on:disable-faillock)             on_disable_faillock ;;
+    off:disable-faillock)            off_disable_faillock ;;
+    status:polkit-no-password)       status_polkit_no_password ;;
+    on:polkit-no-password)           on_polkit_no_password ;;
+    off:polkit-no-password)          off_polkit_no_password ;;
+    *)
+        echo "ERR: combinazione non supportata: $ACTION $NAME" >&2
+        exit 2 ;;
+esac

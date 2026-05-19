@@ -1,0 +1,26 @@
+{
+  "id": "permissions-toggles",
+  "name": "Permissions Toggles",
+  "version": "0.1.0",
+  "minNoctaliaVersion": "3.6.0",
+  "author": "osharko",
+  "license": "MIT",
+  "repository": "https://github.com/osharko/configure-work-machine",
+  "description": "Toggle permission/auth settings: autologin tty1, Noctalia lock on boot, passwordless sudo, no-sudo abbreviations, GNOME keyring no password, disable faillock.",
+  "tags": ["Bar", "Panel", "System", "Toggle", "Security"],
+  "entryPoints": {
+    "main": "Main.qml",
+    "barWidget": "BarWidget.qml",
+    "panel": "Panel.qml",
+    "settings": "Settings.qml"
+  },
+  "dependencies": {
+    "plugins": []
+  },
+  "metadata": {
+    "defaultSettings": {
+      "scriptPath": "~/.local/bin/permissions-toggle",
+      "refreshIntervalSec": 5
+    }
+  }
+}

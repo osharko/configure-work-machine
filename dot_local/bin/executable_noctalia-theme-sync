@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Propaga il tema di Noctalia (~/.config/noctalia/settings.json) a:
+#   - gsettings org.gnome.desktop.interface (color-scheme + gtk-theme)
+#   - xdg-desktop-portal (riflesso automatico da gsettings su gnome impl)
+#
+# Triggerato dal path unit systemd user noctalia-theme-sync.path
+# o eseguibile a mano dopo aver cambiato dark mode in Noctalia.
+set -euo pipefail
+
+SETTINGS="$HOME/.config/noctalia/settings.json"
+
+if [ ! -f "$SETTINGS" ]; then
+    echo "noctalia settings.json non trovato — skip"
+    exit 0
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "jq non installato — skip"
+    exit 0
+fi
+
+DARK=$(jq -r '.colorSchemes.darkMode // false' "$SETTINGS")
+
+case "$DARK" in
+    true)
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+        echo "→ dark mode propagato a gsettings/portal"
+        ;;
+    false)
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-light'
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita'
+        echo "→ light mode propagato a gsettings/portal"
+        ;;
+    *)
+        echo "valore darkMode inatteso: $DARK"
+        exit 1
+        ;;
+esac

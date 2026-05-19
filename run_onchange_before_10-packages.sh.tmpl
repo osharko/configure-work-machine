@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Installa pacchetti pacman+AUR via paru, filtrando per:
+#  - profili attivi (.pacman_sections / .aur_sections risolti da full-config.sh)
+#  - flag host-specific (.is_work_machine, .has_fingerprint)
+#
+# Si rilancia quando packages.yaml/profiles.yaml/.env cambiano (hash trigger).
+# Idempotente: --needed salta i già installati.
+set -euo pipefail
+
+# ─── pacman packages (gated da .pacman_sections + flag host) ────────────────
+PAC_PKGS=(
+{{- range $cat := .pacman_sections }}
+  {{- $skip := false -}}
+  {{- if and (eq $cat "work_only") (not $.is_work_machine) }}{{- $skip = true -}}{{- end }}
+  {{- if not $skip }}
+  # --- pacman/{{ $cat }} ---
+    {{- range $pkg := index $.pacman $cat }}
+  {{ $pkg | quote }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+)
+
+# ─── AUR packages (gated da .aur_sections + flag host) ──────────────────────
+AUR_PKGS=(
+{{- range $cat := .aur_sections }}
+  {{- $skip := false -}}
+  {{- if and (eq $cat "hardware_dell") (not $.has_fingerprint) }}{{- $skip = true -}}{{- end }}
+  {{- if and (eq $cat "work_only") (not $.is_work_machine) }}{{- $skip = true -}}{{- end }}
+  {{- if not $skip }}
+  # --- aur/{{ $cat }} ---
+    {{- range $pkg := index $.aur $cat }}
+  {{ $pkg | quote }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+)
+
+ALL_PKGS=("${PAC_PKGS[@]}" "${AUR_PKGS[@]}")
+echo "── Installazione: ${#PAC_PKGS[@]} pacman + ${#AUR_PKGS[@]} AUR = ${#ALL_PKGS[@]} pacchetti ──"
+
+AUR_HELPER="$(command -v paru || command -v yay || true)"
+if [ -z "$AUR_HELPER" ]; then
+    echo "ERRORE: nessun AUR helper (paru/yay). Lancia basic-config.sh prima." >&2
+    exit 1
+fi
+
+# Strippa mise dal PATH (vedi paru-mise rationale): i PKGBUILD AUR Python/Node
+# si installano nel prefix del binario che vedono in PATH. Se è mise, collidono
+# con i file gestiti da mise. Forziamo /usr/bin a vincere.
+export PATH=$(echo "$PATH" | tr ':' '\n' \
+    | grep -vE 'mise/(installs|shims)|\.local/share/mise' \
+    | tr '\n' ':' | sed 's/:$//')
+
+# Sync keyring fresco (evita errori firma su pacchetti freschi)
+sudo pacman -Sy --needed --noconfirm archlinux-keyring
+
+# Flag univoco paru/yay:
+#   -Syu: refresh DB + upgrade contestuale (Arch NON supporta partial upgrade —
+#         split packages tipo gstreamer richiedono versioni allineate)
+#   --needed: idempotente
+#   --noconfirm: no prompt
+#   --sudoloop: tiene sudo vivo durante long builds AUR
+# paru-only:
+#   --skipreview: no diff PKGBUILD prompt
+#   --batchinstall: bundle pacman call su repo packages
+#   --noupgrademenu: no interactive selection di pkg da updatare
+#   --useask: passa Y a tutti i prompt makepkg ask-on-conflict
+EXTRA_FLAGS=()
+case "$AUR_HELPER" in
+    *paru) EXTRA_FLAGS+=(--skipreview --batchinstall --noupgrademenu --useask) ;;
+esac
+
+"$AUR_HELPER" -Syu --needed --noconfirm --sudoloop "${EXTRA_FLAGS[@]}" "${ALL_PKGS[@]}"
+
+echo "✓ Installazione completata"

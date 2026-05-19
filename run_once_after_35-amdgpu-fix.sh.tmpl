@@ -1,0 +1,39 @@
+{{- if .disable_amdgpu_psr -}}
+#!/usr/bin/env bash
+# AMDGPU PSR disable — workaround flicker iGPU Radeon (Krackan/RDNA 3.5).
+# Aggiunge `amdgpu.dcdebugmask=0x10` alla cmdline della entry `linux-cachyos`
+# in /boot/limine.conf (NON tocca le snapshots). Gated da flag .disable_amdgpu_psr.
+set -euo pipefail
+
+LIMINE=/boot/limine.conf
+PARAM='amdgpu.dcdebugmask=0x10'
+
+if ! sudo test -f "$LIMINE"; then
+    echo "→ $LIMINE assente — skip (boot loader diverso?)"
+    exit 0
+fi
+
+if ! sudo grep -q "//linux-cachyos$" "$LIMINE" 2>/dev/null; then
+    echo "→ entry '//linux-cachyos' non trovata in $LIMINE — skip"
+    exit 0
+fi
+
+# Estraggo blocco entry linux-cachyos (fino a riga vuota o EOF) e cerco il param
+if sudo sed -n '/\/\/linux-cachyos$/,/^$/p' "$LIMINE" | grep -q "$PARAM"; then
+    echo "✓ amdgpu PSR disable già presente in $LIMINE"
+    exit 0
+fi
+
+BACKUP="$LIMINE.bak.$(date +%s)"
+sudo cp "$LIMINE" "$BACKUP"
+echo "→ backup creato: $BACKUP"
+
+# Aggiungo $PARAM in coda alla riga `cmdline:` della entry linux-cachyos
+sudo sed -i '/\/\/linux-cachyos$/,/^$/{/^[[:space:]]*cmdline:/{/'"$PARAM"'/!s|$| '"$PARAM"'|}}' "$LIMINE"
+
+echo "→ amdgpu PSR disable applicato in $LIMINE (reboot per attivare)"
+{{- else -}}
+#!/usr/bin/env bash
+# .disable_amdgpu_psr = false → no-op
+echo "→ disable_amdgpu_psr=false → skip patch limine.conf"
+{{- end -}}

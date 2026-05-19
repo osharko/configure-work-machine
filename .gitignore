@@ -1,0 +1,5 @@
+# Mai committare file di stato/secret/cache
+secrets.env
+config.env
+.DS_Store
+*.swp

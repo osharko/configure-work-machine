@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# imv-folder — apre imv con TUTTA la cartella del file passato come arg,
+# selezionando inizialmente il file scelto. Permette di scorrere le altre
+# immagini con n/p (next/prev) — comportamento "viewer normale" che imv
+# standalone non offre quando lo invochi con un singolo file.
+#
+# Da usare come Exec= nel .desktop entry per associare alle estensioni image/*.
+#
+# Limit: imv legge solo file con estensioni image note; altri file nella
+# cartella vengono silenziosamente skippati.
+set -euo pipefail
+
+# Se l'utente passa più file, comportamento standard imv (solo quelli).
+if [ "$#" -gt 1 ] || [ -d "${1:-}" ]; then
+    exec imv "$@"
+fi
+
+file="${1:-}"
+if [ -z "$file" ] || [ ! -f "$file" ]; then
+    # No arg or non-file: comportamento di default
+    exec imv "$@"
+fi
+
+abs=$(realpath "$file")
+dir=$(dirname "$abs")
+
+# `select_abs <path>` posiziona imv sul file specifico all'interno della dir caricata.
+exec imv "$dir" -c "select_abs $abs"

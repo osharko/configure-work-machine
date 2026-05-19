@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Bootstrap: prerequisiti minimi prima dei pacchetti.
+# - aggiorna keyring (CachyOS può averlo stale dopo l'install)
+# - installa yay se manca (necessario per AUR)
+# - verifica che 1Password CLI sia loggato
+set -euo pipefail
+
+echo "── Bootstrap pre-install ──"
+
+# Aggiornamento keyring (evita errori di firma su pacchetti freschi)
+sudo pacman -Sy --needed --noconfirm archlinux-keyring
+
+# AUR helper: la spin CachyOS porta paru, su Arch vanilla installiamo yay
+if ! command -v paru >/dev/null 2>&1 && ! command -v yay >/dev/null 2>&1; then
+  echo "→ Nessun AUR helper trovato, installo yay"
+  sudo pacman -S --needed --noconfirm base-devel git
+  tmpdir=$(mktemp -d)
+  git clone https://aur.archlinux.org/yay-bin.git "$tmpdir"
+  ( cd "$tmpdir" && makepkg -si --noconfirm )
+  rm -rf "$tmpdir"
+fi
+
+# Verifica 1Password
+if ! command -v op >/dev/null 2>&1; then
+  echo "⚠  1Password CLI non installato. Installalo prima:"
+  echo "   sudo pacman -S 1password-cli"
+  exit 1
+fi
+
+if ! op account list 2>/dev/null | grep -q .; then
+  echo "⚠  Nessun account 1Password configurato. Esegui:"
+  echo "   op account add --address {{ .op_account_url }} --email {{ .email }}"
+  echo "   eval \"\$(op signin)\""
+  exit 1
+fi
+
+echo "✓ Bootstrap completo"

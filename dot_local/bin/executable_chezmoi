@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# chezmoi wrapper shell-agnostic: aggiunge --force a `apply` per skip prompt
+# all-overwrite/diff/skip/quit. Altri sub-command pass-through.
+#
+# Vive in ~/.local/bin/chezmoi → prevale su /usr/bin/chezmoi via fish_add_path.
+
+set -euo pipefail
+
+# Trova il binario reale (skip se stesso)
+REAL_CHEZMOI=""
+for p in /usr/bin/chezmoi /usr/local/bin/chezmoi; do
+    if [ -x "$p" ]; then
+        REAL_CHEZMOI="$p"
+        break
+    fi
+done
+if [ -z "$REAL_CHEZMOI" ]; then
+    echo "errore: chezmoi non trovato in /usr/bin o /usr/local/bin" >&2
+    exit 127
+fi
+
+# `apply` → aggiunge --force (idempotente: se già passato, niente duplicato)
+if [ "${1:-}" = "apply" ]; then
+    shift
+    # check se --force/-f già presente
+    has_force=0
+    for arg in "$@"; do
+        case "$arg" in --force|-f) has_force=1 ;; esac
+    done
+    if [ "$has_force" = "0" ]; then
+        exec "$REAL_CHEZMOI" apply --force "$@"
+    fi
+fi
+
+exec "$REAL_CHEZMOI" "$@"

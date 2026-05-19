@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Setup flatpak: aggiunge remote flathub + installa app da .flatpak.
+# Gated da .enable_flatpak (risolto da full-config.sh dai profili attivi).
+# Si rilancia quando packages.yaml cambia (hash della lista flatpak).
+#
+# Hash trigger: {{ .flatpak | toJson | sha256sum }}
+set -euo pipefail
+
+{{- if not .enable_flatpak }}
+echo "→ flatpak disabilitato dal profilo attivo, skip"
+exit 0
+{{- end }}
+
+if ! command -v flatpak >/dev/null 2>&1; then
+    echo "⚠  flatpak non installato, skip"
+    exit 0
+fi
+
+# Remote flathub (idempotente: --if-not-exists)
+echo "→ flatpak remote: flathub"
+flatpak remote-add --if-not-exists --user flathub \
+    https://flathub.org/repo/flathub.flatpakrepo
+
+# Lista app da packages.yaml
+FLATPAKS=(
+{{- range .flatpak }}
+  {{ . | quote }}
+{{- end }}
+)
+
+if [ ${#FLATPAKS[@]} -gt 0 ]; then
+    echo "── Installo ${#FLATPAKS[@]} flatpak ──"
+    # --user: install nel home utente (no sudo); --noninteractive: no prompt
+    flatpak install --user --noninteractive --assumeyes flathub "${FLATPAKS[@]}" || true
+fi
+
+echo "✓ Flatpak setup completo"

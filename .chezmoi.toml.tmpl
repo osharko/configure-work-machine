@@ -1,0 +1,16 @@
+{{- /* Prompt interattivo al primo `chezmoi init`. Le risposte vengono salvate in ~/.config/chezmoi/chezmoi.toml e usate dai template. */ -}}
+
+{{- $email := promptStringOnce . "email" "Git/1Password email" -}}
+{{- $hasFingerprint := promptBoolOnce . "has_fingerprint" "Macchina con fingerprint reader Dell?" false -}}
+{{- $isWorkMachine := promptBoolOnce . "is_work_machine" "Macchina di lavoro (gating per profilo work)?" true -}}
+{{- $createPersonalDistrobox := promptBoolOnce . "create_personal_distrobox" "Creare distrobox 'personal' (Arch sandbox)?" true -}}
+{{- $opAccount := promptStringOnce . "op_account_url" "1Password account URL" "my.1password.com" -}}
+
+sourceDir = {{ printf "%s/configure-work-machine" .chezmoi.homeDir | quote }}
+
+[data]
+  email = {{ $email | quote }}
+  has_fingerprint = {{ $hasFingerprint }}
+  is_work_machine = {{ $isWorkMachine }}
+  create_personal_distrobox = {{ $createPersonalDistrobox }}
+  op_account_url = {{ $opAccount | quote }}

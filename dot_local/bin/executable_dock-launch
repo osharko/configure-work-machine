@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Lancia il pinned dock #N di Noctalia.
+# Legge ~/.config/noctalia/settings.json → dock.pinnedApps[N-1]
+# Risolve il desktop-id via gtk-launch (no .desktop suffix).
+# No-op silenzioso se posizione vuota.
+
+set -euo pipefail
+N="${1:-}"
+[ -z "$N" ] && exit 0
+
+SETTINGS="$HOME/.config/noctalia/settings.json"
+[ ! -f "$SETTINGS" ] && exit 0
+
+APP=$(jq -r ".dock.pinnedApps[$((N-1))] // empty" "$SETTINGS" 2>/dev/null)
+[ -z "$APP" ] && exit 0   # no-op
+
+# gtk-launch accetta desktop-id (case-sensitive). Match anche fuzzy come fallback.
+if gtk-launch "$APP" 2>/dev/null; then
+    exit 0
+fi
+
+# Fallback: cerca .desktop case-insensitive
+for dir in \
+    "$HOME/.local/share/applications" \
+    /usr/share/applications \
+    /var/lib/flatpak/exports/share/applications \
+    "$HOME/.local/share/flatpak/exports/share/applications"
+do
+    [ -d "$dir" ] || continue
+    f=$(find "$dir" -maxdepth 1 -iname "${APP}.desktop" 2>/dev/null | head -1)
+    if [ -n "$f" ]; then
+        gtk-launch "$(basename "$f" .desktop)"
+        exit 0
+    fi
+done
+
+# nessun match
+exit 0

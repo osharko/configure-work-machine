@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lazygit
+GenericName=Git TUI
+Comment=Simple terminal UI for git commands
+Exec=alacritty -e lazygit
+Icon=git
+Terminal=false
+Categories=Development;RevisionControl;
+Keywords=git;tui;vcs;

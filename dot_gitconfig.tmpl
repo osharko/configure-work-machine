@@ -1,0 +1,52 @@
+{{- /* Identità da chezmoi data (risolta da full-config.sh in base a
+       .vault_provider: 1password legge op:// o env legge secrets.env). */ -}}
+[user]
+    name  = {{ .git_name }}
+    email = {{ .email }}
+    {{- if .signing_key }}
+    # Signing SSH — public key risolta da full-config.sh
+    signingkey = {{ .signing_key }}
+    {{- end }}
+
+[core]
+    editor = nvim
+    pager  = delta
+
+[init]
+    defaultBranch = main
+
+[pull]
+    rebase = true
+
+[merge]
+    conflictStyle = zdiff3
+
+[diff]
+    algorithm = histogram
+
+[push]
+    autoSetupRemote = true
+
+[commit]
+    gpgsign = {{ if .signing_key }}true{{ else }}false{{ end }}
+[tag]
+    gpgsign = {{ if .signing_key }}true{{ else }}false{{ end }}
+
+[gpg]
+    format = ssh
+[gpg "ssh"]
+    program = /opt/1Password/op-ssh-sign
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate     = true
+    line-numbers = true
+
+[alias]
+    s   = status -sb
+    l   = log --oneline --graph --decorate
+    co  = checkout
+    br  = branch
+    sw  = switch
+    cm  = commit -m

@@ -1,0 +1,39 @@
+# Profili di installazione — dichiarano quali sezioni di packages.yaml attivare.
+#
+# Letto da full-config.sh per risolvere i profili attivi (INSTALL_PROFILES in
+# .env) → calcola pacman_sections, aur_sections, enable_flatpak in chezmoi.toml.
+#
+# Niente `extends`: per chiarezza ogni profilo elenca esplicitamente TUTTE le
+# proprie sezioni. Cambia un profilo? Cambia solo qui.
+#
+# Gating ulteriore (work_only, hardware_dell) resta gestito dai flag .env
+# (is_work_machine / has_fingerprint) in run_onchange_before_10-packages.
+
+profiles:
+  base:
+    pacman: [cli, fonts, apps, remote, hardware, hypr_compat]
+    aur: [apps, fonts]
+    flatpak: false
+
+  dev:
+    pacman: [cli, fonts, apps, remote, hardware, hypr_compat,
+             toolchain, containers, editors]
+    aur: [apps, fonts, utils]
+    flatpak: true
+
+  work:
+    pacman: [cli, fonts, apps, remote, hardware, hypr_compat,
+             toolchain, containers, editors, work_only]
+    aur: [apps, fonts, utils, work_only]
+    flatpak: true
+
+  gaming:
+    pacman: [gaming]
+    aur: [gaming]
+    flatpak: false
+
+  mediacenter:
+    # Laterale come gaming. Spotify + Jellyfin client + VLC per consumo media.
+    pacman: [mediacenter]
+    aur: [mediacenter]
+    flatpak: false

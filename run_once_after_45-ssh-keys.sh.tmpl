@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Deploy SSH keys → ~/.ssh/
+#
+# Branching su .vault_provider:
+#   - 1password → legge "public key" + "private key" da op://$VAULT/$SSH_ITEM
+#                 e scrive in ~/.ssh/id_ed25519{,.pub}
+#   - env       → NON deploya nulla (l'utente mette a mano le chiavi).
+#                 Verifica solo che ~/.ssh esista con perms 0700 e
+#                 (se SIGNING_KEY presente + authorized_keys_fallback) la
+#                 scrive in ~/.ssh/authorized_keys
+#
+# Idempotente. Re-trigger: chezmoi state forget-bucket --bucket=scriptState
+set -euo pipefail
+
+VAULT_PROVIDER={{ .vault_provider | quote }}
+VAULT={{ .op_vault | quote }}
+SSH_ITEM={{ .op_ssh_item | quote }}
+FALLBACK_AUTH={{ .authorized_keys_fallback }}
+SIGNING_KEY_CACHED={{ .signing_key | quote }}
+
+SSH_DIR="$HOME/.ssh"
+mkdir -p "$SSH_DIR"
+chmod 0700 "$SSH_DIR"
+
+write_key() {
+    local content="$1" dest="$2" mode="$3"
+    if [ -z "$content" ]; then
+        echo "  skip $dest (sorgente vuota)"
+        return
+    fi
+    [ "${content: -1}" != $'\n' ] && content="${content}"$'\n'
+    if [ -f "$dest" ] && [ "$(cat "$dest")" = "$(printf '%s' "$content")" ]; then
+        echo "  ok  $dest (già allineato)"
+    else
+        printf '%s' "$content" > "$dest"
+        echo "  →   $dest (scritto)"
+    fi
+    chmod "$mode" "$dest"
+}
+
+PUBLIC_KEY=""
+
+if [ "$VAULT_PROVIDER" = "1password" ]; then
+    echo "── Deploy SSH keys da op://$VAULT/$SSH_ITEM ──"
+    if ! command -v op >/dev/null 2>&1; then
+        echo "⚠  'op' non trovato — skip deploy chiavi" >&2
+        exit 0
+    fi
+    if ! op account list 2>/dev/null | tail -n +2 | grep -q .; then
+        echo "⚠  op non loggato — skip deploy chiavi (rilancia dopo 'eval \"\$(op signin)\"')" >&2
+        exit 0
+    fi
+    # 1P SSH Key: field names dipendono dal locale 1P (IT: "chiave privata").
+    PUBLIC_KEY=$(op read "op://$VAULT/$SSH_ITEM/public key" 2>/dev/null \
+                 || op read "op://$VAULT/$SSH_ITEM/chiave pubblica" 2>/dev/null || true)
+    PRIVATE_KEY=$(op read "op://$VAULT/$SSH_ITEM/private key" 2>/dev/null \
+                  || op read "op://$VAULT/$SSH_ITEM/chiave privata" 2>/dev/null || true)
+    write_key "$PUBLIC_KEY"  "$SSH_DIR/id_ed25519.pub" 0644
+    write_key "$PRIVATE_KEY" "$SSH_DIR/id_ed25519"     0600
+else
+    echo "── vault=env: deploy SSH chiavi saltato (devi metterle a mano in ~/.ssh/) ──"
+    if [ -f "$SSH_DIR/id_ed25519" ]; then
+        chmod 0600 "$SSH_DIR/id_ed25519" 2>/dev/null || true
+        echo "  ✓ ~/.ssh/id_ed25519 trovata (perms 0600 enforced)"
+    else
+        echo "  ⚠  ~/.ssh/id_ed25519 NON trovata — copiala a mano per usarla con git/ssh"
+    fi
+    PUBLIC_KEY="$SIGNING_KEY_CACHED"
+fi
+
+# Fallback authorized_keys (entrambi i provider): public key utile per ssh in entrata
+if [ "$FALLBACK_AUTH" = "true" ] && [ -n "$PUBLIC_KEY" ]; then
+    write_key "$PUBLIC_KEY" "$SSH_DIR/authorized_keys" 0644
+fi
+
+# Personal _ssh.config (opzionale): host LAN/personali → ~/.ssh/config.d/personal.conf
+# Deploy SOLO se vault=1password e l'item _ssh.config esiste nel vault default.
+if [ "$VAULT_PROVIDER" = "1password" ]; then
+    PERSONAL_CFG=$(op read "op://$VAULT/_ssh/config" 2>/dev/null || true)
+    if [ -n "$PERSONAL_CFG" ]; then
+        mkdir -p "$SSH_DIR/config.d"
+        write_key "$PERSONAL_CFG" "$SSH_DIR/config.d/personal.conf" 0644
+    fi
+fi
+
+echo "✓ SSH keys handling completo"

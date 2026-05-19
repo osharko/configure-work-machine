@@ -1,0 +1,22 @@
+# File / cartelle che NON vengono applicate al filesystem
+README.md
+ROADMAP.md
+CLAUDE.md
+bootstrap.sh
+basic-config.sh
+full-config.sh
+package-picker.html
+omarchy-reference
+.env.config.example
+.env.personal.example
+.env.work.example
+profiles.yaml.example
+.git
+.gitignore
+
+# ─── Gated da .use_noctalia_config ──────────────────────────────────────────
+# Se l'utente non vuole la mia config Noctalia (settings, plugins, bar, dock),
+# ignoriamo tutta la sub-tree → Noctalia parte con i propri default.
+{{- if not .use_noctalia_config }}
+dot_config/noctalia/**
+{{- end }}

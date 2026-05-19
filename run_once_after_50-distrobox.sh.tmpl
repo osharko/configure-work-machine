@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Crea i distrobox elencati in .distroboxes (lista da chezmoi data, generata
+# dal CSV $DISTROBOXES del .env).
+# Bootstrap interno: solo essentials (git, curl, build tools) + mise.
+# Le toolchain specifiche (Java/Node/Go/Python) le installa l'utente
+# nel container con `mise use` dentro ai propri progetti.
+set -euo pipefail
+
+{{- /* `index . "distroboxes"` invece di `.distroboxes` per evitare
+       "map has no entry for key distroboxes" se chezmoi.toml non ha la chiave. */ -}}
+{{- $boxes := (index . "distroboxes") | default (list) }}
+{{- if not $boxes }}
+echo "ℹ  Nessun distrobox configurato in .env (DISTROBOXES vuoto) — skip"
+exit 0
+{{- end }}
+
+if ! command -v distrobox >/dev/null 2>&1; then
+    echo "⚠  distrobox non installato, skip"
+    exit 0
+fi
+
+# Bootstrap base in un container: detect pkg manager + install essentials + mise
+bootstrap_container() {
+    local name="$1"
+    distrobox enter -n "$name" -- bash -c '
+        set -euo pipefail
+        if command -v mise >/dev/null 2>&1; then
+            echo "  ✓ $HOSTNAME: mise già presente"
+            exit 0
+        fi
+        echo "  → $HOSTNAME: install base essentials + mise"
+        if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends \
+                curl git ca-certificates gnupg build-essential
+        elif command -v dnf >/dev/null 2>&1; then
+            sudo dnf install -y -q \
+                curl git ca-certificates gnupg2 @development-tools
+        elif command -v pacman >/dev/null 2>&1; then
+            sudo pacman -Sy --noconfirm --needed base-devel git curl
+        else
+            echo "  ⚠  package manager non riconosciuto, skip"
+            exit 0
+        fi
+        curl -fsSL https://mise.run | sh
+        grep -q "mise activate bash" ~/.bashrc 2>/dev/null \
+            || echo "eval \"\$(\$HOME/.local/bin/mise activate bash)\"" >> ~/.bashrc
+        echo "  ✓ $HOSTNAME: mise installato"
+    '
+}
+
+create_box() {
+    local name="$1" image="$2"
+    if distrobox list 2>/dev/null | awk 'NR>1 {print $3}' | grep -qx "$name"; then
+        echo "→ '$name' esistente (skip create, bootstrap idempotente)"
+    else
+        echo "→ Creo '$name' ← $image"
+        distrobox create -n "$name" -i "$image" -Y
+    fi
+    bootstrap_container "$name"
+}
+
+echo "── Distrobox setup ({{ len $boxes }} container) ──"
+{{ range $boxes }}
+create_box {{ .name | quote }} {{ .image | quote }}
+{{- end }}
+
+echo
+echo "✓ Distrobox setup completo. Per entrare:  dx <nome>  (o:  distrobox enter <nome>)"

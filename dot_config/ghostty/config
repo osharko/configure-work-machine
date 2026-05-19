@@ -1,0 +1,54 @@
+# ── ~/.config/ghostty/config — gestito da chezmoi ─────────────────────────
+# Profilo equivalente Alacritty (Nord + JetBrainsMono + opacity 0.92).
+# Theme inline (più portabile di `theme = nord`: nome built-in varia tra versioni).
+
+# ─── Nord palette (mirror Alacritty) ──────────────────────────────────────
+background = 2E3440
+foreground = D8DEE9
+cursor-color = D8DEE9
+selection-background = 4C566A
+selection-foreground = D8DEE9
+
+palette = 0=#3B4252
+palette = 1=#BF616A
+palette = 2=#A3BE8C
+palette = 3=#EBCB8B
+palette = 4=#81A1C1
+palette = 5=#B48EAD
+palette = 6=#88C0D0
+palette = 7=#E5E9F0
+palette = 8=#4C566A
+palette = 9=#BF616A
+palette = 10=#A3BE8C
+palette = 11=#EBCB8B
+palette = 12=#81A1C1
+palette = 13=#B48EAD
+palette = 14=#8FBCBB
+palette = 15=#ECEFF4
+
+font-family = JetBrainsMono Nerd Font
+font-size = 8
+
+background-opacity = 0.92
+window-decoration = true
+window-padding-x = 8
+window-padding-y = 8
+window-padding-balance = true
+
+cursor-style = underline
+cursor-style-blink = false
+
+copy-on-select = clipboard
+clipboard-paste-protection = false
+
+shell-integration = fish
+shell-integration-features = no-cursor
+
+# ─── Keybinds (parity con Alacritty) ──────────────────────────────────────
+keybind = ctrl+shift+v=paste_from_clipboard
+keybind = ctrl+shift+c=copy_to_clipboard
+keybind = ctrl+0=reset_font_size
+keybind = shift+page_up=scroll_page_up
+keybind = shift+page_down=scroll_page_down
+keybind = shift+home=scroll_to_top
+keybind = shift+end=scroll_to_bottom

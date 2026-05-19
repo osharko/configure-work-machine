@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Pre-cleanup: rimuove pacchetti che entreranno in conflitto col paru -Syu
+# successivo (script 10-packages). Si rilancia quando cambia la config.
+#
+# Hash trigger:
+#   has_fingerprint = {{ .has_fingerprint }}
+set -euo pipefail
+
+# ─── quickshell mainline vs noctalia-qs ─────────────────────────────────────
+# Il nostro packages.yaml installa `noctalia-qs` (build custom indispensabile
+# per noctalia-shell 4.7+). Se la macchina ha già `quickshell` mainline
+# installato (es. residuo di un setup precedente), paru -Syu fallisce con
+# "conflict noctalia-qs vs quickshell". Rimuovi quickshell prima.
+if pacman -Q quickshell &>/dev/null && ! pacman -Q noctalia-qs &>/dev/null; then
+    echo "→ quickshell mainline installato → rimuovo (sostituito da noctalia-qs)"
+    sudo pacman -Rdd --noconfirm quickshell || true
+fi
+
+{{- if .has_fingerprint }}
+
+# libfprint (vanilla) conflitta con libfprint-tod che il pkg list installa.
+# Rimuoviamo PRIMA del -Syu; il 60-fingerprint completerà la config dopo.
+if pacman -Q libfprint &>/dev/null; then
+    echo "→ libfprint installato → rimuovo (verrà sostituito da libfprint-tod)"
+    # -Rdd è un'op pacman: paru delega, ma sudo-via-pacman è più diretto e idiomatico
+    sudo pacman -Rdd --noconfirm libfprint || true
+fi
+{{- end }}
+
+# Pre-install provider espliciti per evitare che paru ne scelga di brutti
+# quando risolve dep virtuali. Esempi:
+#   libjpeg6 → paru sceglie jpegli-git (primo alfabeticamente) che conflitta
+#              con libjxl. Pre-installando libjpeg6-turbo-bin paru lo trova
+#              già presente e non considera altri provider.
+AUR_HELPER="$(command -v paru || command -v yay || true)"
+if [ -n "$AUR_HELPER" ]; then
+    PROVIDERS_PRE_INSTALL=(libjpeg6-turbo-bin lib32-libjpeg6-turbo-bin)
+    MISSING=()
+    for p in "${PROVIDERS_PRE_INSTALL[@]}"; do
+        pacman -Q "$p" >/dev/null 2>&1 || MISSING+=("$p")
+    done
+    if [ ${#MISSING[@]} -gt 0 ]; then
+        echo "→ Pre-install AUR provider: ${MISSING[*]}"
+        "$AUR_HELPER" -S --needed --noconfirm --sudoloop --skipreview "${MISSING[@]}"
+    fi
+fi
+
+echo "✓ Prereq cleanup completo"

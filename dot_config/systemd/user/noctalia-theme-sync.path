@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch Noctalia settings.json for color-scheme changes
+After=graphical-session.target
+
+[Path]
+PathChanged=%h/.config/noctalia/settings.json
+TriggerLimitBurst=2
+TriggerLimitIntervalSec=1s
+
+[Install]
+WantedBy=default.target

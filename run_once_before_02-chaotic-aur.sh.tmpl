@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Abilita repo chaotic-aur (pkg AUR pre-compilati: niente build locale).
+# Eseguito UNA volta prima di `before_10-packages`.
+set -euo pipefail
+
+# Skip se già presente
+if grep -q '^\[chaotic-aur\]' /etc/pacman.conf 2>/dev/null; then
+    echo "✓ chaotic-aur già abilitato"
+    exit 0
+fi
+
+echo "── Setup chaotic-aur ──"
+
+# 1. Import chiave + trust
+sudo pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com
+sudo pacman-key --lsign-key 3056513887B78AEB
+
+# 2. Install keyring + mirrorlist (binari pre-firmati Chaotic)
+sudo pacman -U --noconfirm \
+    'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
+    'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'
+
+# 3. Append repo a pacman.conf (alla fine, dopo gli altri)
+if ! grep -q '^\[chaotic-aur\]' /etc/pacman.conf; then
+    echo "" | sudo tee -a /etc/pacman.conf >/dev/null
+    echo "[chaotic-aur]" | sudo tee -a /etc/pacman.conf >/dev/null
+    echo "Include = /etc/pacman.d/chaotic-mirrorlist" | sudo tee -a /etc/pacman.conf >/dev/null
+fi
+
+# 4. Refresh DB
+sudo pacman -Sy
+
+echo "✓ chaotic-aur attivo (pkg AUR pre-compilati disponibili)"
