@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Pre-fetch dei plugin upstream Noctalia (github.com/noctalia-dev/noctalia-plugins).
+#
+# RAZIONALE: al primo boot post-bootstrap, niri parte → spawn-sh-at-startup
+# lancia `qs -c noctalia-shell`. Noctalia legge ~/.config/noctalia/settings.json,
+# trova widget tipo `plugin:screen-toolkit` MA i plugin upstream non sono ancora
+# in ~/.config/noctalia/plugins/<name>/ (li scaricherebbe lui stesso da rete,
+# ma in modo asincrono e troppo tardi per evitare il danno). Noctalia quindi
+# shifta i widget non-risolti in fondo a `bar.widgets.right` e riscrive
+# settings.json corrompendo il layout del template (vedi 03-noctalia-refresh).
+#
+# Lo script gira PRIMA di 03-noctalia-refresh: pre-popola filesystem dei plugin
+# upstream → Noctalia li trova caricati al primo avvio → layout intatto.
+#
+# Idempotente: skip se ogni plugin atteso ha già manifest.json in filesystem.
+#
+# Hash trigger (rerun se la lista upstream cambia):
+#   plugins: {{ .noctalia_plugins | toJson | sha256sum }}
+set -euo pipefail
+
+NOCTALIA_PLUGINS_DIR="$HOME/.config/noctalia/plugins"
+UPSTREAM_REPO="https://github.com/noctalia-dev/noctalia-plugins"
+
+# Plugin upstream da pre-fetchare: sottoinsieme di .noctalia_plugins ESCLUSI
+# quelli shippati localmente da dot_config/noctalia/plugins/<name>/ (che chezmoi
+# copia in filesystem nello step file-copy successivo).
+UPSTREAM_PLUGINS=(
+  polkit-agent
+  privacy-indicator
+  ip-monitor
+  clipper
+  mini-docker
+  screen-toolkit
+  usb-drive-manager
+)
+
+mkdir -p "$NOCTALIA_PLUGINS_DIR"
+
+need_fetch=false
+for p in "${UPSTREAM_PLUGINS[@]}"; do
+    if [ ! -f "$NOCTALIA_PLUGINS_DIR/$p/manifest.json" ]; then
+        need_fetch=true
+        break
+    fi
+done
+
+if [ "$need_fetch" = false ]; then
+    echo "→ Plugin upstream Noctalia già presenti, skip prefetch"
+    exit 0
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+echo "→ Clono $UPSTREAM_REPO per pre-fetch plugin Noctalia..."
+git clone --depth 1 --quiet "$UPSTREAM_REPO" "$TMP/np"
+
+count=0
+for p in "${UPSTREAM_PLUGINS[@]}"; do
+    src="$TMP/np/$p"
+    dst="$NOCTALIA_PLUGINS_DIR/$p"
+    if [ ! -f "$src/manifest.json" ]; then
+        echo "  ✗ $p non presente in upstream, skip"
+        continue
+    fi
+    if [ -f "$dst/manifest.json" ]; then
+        echo "  · $p già presente, skip"
+        continue
+    fi
+    mkdir -p "$dst"
+    cp -rT "$src" "$dst"
+    echo "  ✓ $p pre-fetched"
+    count=$((count + 1))
+done
+
+echo "✓ Pre-fetch plugin Noctalia completo ($count plugin aggiunti)"
