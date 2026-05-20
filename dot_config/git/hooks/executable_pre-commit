@@ -20,15 +20,41 @@ set -uo pipefail
 . "$HOME/.local/lib/git-ctx-resolve.sh"
 
 if git_ctx_resolve && [ -n "$VAULT_GITCONFIG" ]; then
-    email=$(git config -f "$VAULT_GITCONFIG" --get user.email 2>/dev/null || true)
-    name=$(git config -f "$VAULT_GITCONFIG" --get user.name 2>/dev/null || true)
-    if [ -n "$email" ]; then
-        cur_email=$(git config --local --get user.email 2>/dev/null || true)
-        [ "$cur_email" != "$email" ] && git config --local user.email "$email"
+    target_email=$(git config -f "$VAULT_GITCONFIG" --get user.email 2>/dev/null || true)
+    target_name=$(git config -f "$VAULT_GITCONFIG" --get user.name 2>/dev/null || true)
+    effective_email=$(git config --get user.email 2>/dev/null || true)
+    effective_name=$(git config --get user.name 2>/dev/null || true)
+
+    needs_retry=0
+    if [ -n "$target_email" ] && [ "$effective_email" != "$target_email" ]; then
+        git config --local user.email "$target_email"
+        needs_retry=1
     fi
-    if [ -n "$name" ]; then
-        cur_name=$(git config --local --get user.name 2>/dev/null || true)
-        [ "$cur_name" != "$name" ] && git config --local user.name "$name"
+    if [ -n "$target_name" ] && [ "$effective_name" != "$target_name" ]; then
+        git config --local user.name "$target_name"
+        needs_retry=1
+    fi
+
+    if [ "$needs_retry" = "1" ]; then
+        # Git ha già caricato user.email/name PRIMA di chiamare pre-commit:
+        # se procedessimo ora, il commit userebbe i valori vecchi. Abortiamo
+        # con exit 1 e lasciamo che l'utente rilanci — al secondo giro il
+        # config locale è già settato, no mismatch, no abort.
+        cat <<EOF >&2
+
+⚠  Identità non allineata al vault '$VAULT' rilevato dal remote del repo.
+   Aggiornata config locale del repo:
+EOF
+        [ -n "$target_email" ] && [ "$effective_email" != "$target_email" ] && \
+            printf "     user.email:  %s → %s\n" "$effective_email" "$target_email" >&2
+        [ -n "$target_name" ]  && [ "$effective_name"  != "$target_name"  ] && \
+            printf "     user.name:   %s → %s\n" "$effective_name" "$target_name" >&2
+        cat <<EOF >&2
+
+   Rilancia il commit (la stage è preservata). Per saltare il guard
+   una tantum: 'git commit --no-verify'.
+EOF
+        exit 1
     fi
 fi
 
