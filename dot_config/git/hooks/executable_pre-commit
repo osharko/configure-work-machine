@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Hook pre-commit globale: setta user.email + user.name del repo corrente
+# in base al vault SSH risolto dal remote URL.
+#
+# Funzionamento: stessa lib del wrapper signing → estrae il vault dalla
+# identityfile risolta da ssh -G → legge ~/.gitconfig.d/<vault>.gitconfig
+# (generato da 46-ssh-identities) → scrive user.email/user.name nel
+# .git/config locale del repo. Idempotente: ricomputa ad ogni commit.
+#
+# Composizione con hook locali: dopo il nostro lavoro, deleghiamo a
+# .git/hooks/pre-commit del repo se esiste, per non rompere setup come
+# husky/pre-commit framework. Se il local hook esce non-zero, propaghiamo.
+#
+# Failure mode: tutti gli step di resolve/parse sono opzionali. Mai exit
+# non-zero per fallimento di resolve — bloccherebbe il commit.
+
+set -uo pipefail
+
+# shellcheck source=/dev/null
+. "$HOME/.local/lib/git-ctx-resolve.sh"
+
+if git_ctx_resolve && [ -n "$VAULT_GITCONFIG" ]; then
+    email=$(git config -f "$VAULT_GITCONFIG" --get user.email 2>/dev/null || true)
+    name=$(git config -f "$VAULT_GITCONFIG" --get user.name 2>/dev/null || true)
+    if [ -n "$email" ]; then
+        cur_email=$(git config --local --get user.email 2>/dev/null || true)
+        [ "$cur_email" != "$email" ] && git config --local user.email "$email"
+    fi
+    if [ -n "$name" ]; then
+        cur_name=$(git config --local --get user.name 2>/dev/null || true)
+        [ "$cur_name" != "$name" ] && git config --local user.name "$name"
+    fi
+fi
+
+# Chain a eventuale hook locale del repo (compat husky/pre-commit framework).
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || true)
+LOCAL_HOOK="${GIT_DIR}/hooks/pre-commit"
+if [ -n "$GIT_DIR" ] && [ -x "$LOCAL_HOOK" ]; then
+    # Evita ricorsione se per qualche bizzarria $LOCAL_HOOK == questo file
+    if [ "$(readlink -f "$LOCAL_HOOK" 2>/dev/null)" != "$(readlink -f "$0" 2>/dev/null)" ]; then
+        exec "$LOCAL_HOOK" "$@"
+    fi
+fi
+exit 0

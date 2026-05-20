@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Avvisa che agent.toml di 1Password è stato (ri)generato → 1P va riavviato
+# per ricaricarlo. Lo script gira solo quando il contenuto rendered cambia
+# (hash trigger sotto), quindi NON spamma se rilanci chez.sh senza modifiche.
+#
+# Hash trigger (rerun se la vault list per agent.toml cambia):
+#   vaults: {{ concat (list .op_vault) (splitList "," .ssh_extra_identities) | toJson | sha256sum }}
+
+set -euo pipefail
+
+# Skip se 1Password non è in esecuzione (es. fresh install pre-primo-avvio):
+# il file appena scritto verrà letto naturalmente al primo start.
+if ! pgrep -ax 1password >/dev/null 2>&1; then
+    echo "ℹ  agent.toml aggiornato (1P non in esecuzione → verrà letto al primo avvio)"
+    exit 0
+fi
+
+cat <<'WARN'
+⚠  ~/.config/1Password/ssh/agent.toml è stato aggiornato.
+   1Password legge questo file SOLO all'avvio. Per applicarlo:
+
+       systemctl --user restart app-1password@autostart.service
+
+   (fallback manuale se il service unit non c'è:
+        pkill -x 1password && setsid -f /opt/1Password/1password --silent)
+
+   Poi sblocca l'app. Senza restart, `op-ssh-sign` per chiavi nei nuovi
+   vault continuerà a fallire con "No SSH private key found".
+WARN

@@ -1,16 +1,27 @@
 {{- /* Identità da chezmoi data (risolta da full-config.sh in base a
-       .vault_provider: 1password legge op:// o env legge secrets.env). */ -}}
+       .vault_provider: 1password legge op:// o env legge secrets.env).
+
+       email/name/signingkey QUI sono i DEFAULT per repo che non matchano
+       nessun host nei file ~/.ssh/<vault>/config (vault personale del repo).
+       Il routing context-aware sta in:
+         - ~/.local/bin/git-ssh-sign  (signing wrapper)
+         - ~/.config/git/hooks/pre-commit (email/name resolver)
+         - ~/.local/lib/git-ctx-resolve.sh (lib condivisa)
+       che leggono ssh -G $remote_host → identityfile → vault → sostituiscono
+       email/name/signingkey runtime. */ -}}
 [user]
     name  = {{ .git_name }}
     email = {{ .email }}
     {{- if .signing_key }}
-    # Signing SSH — public key risolta da full-config.sh
+    # Signing SSH default — il wrapper git-ssh-sign sostituisce con la key
+    # del vault giusto in base al remote del repo (ssh -G driven).
     signingkey = {{ .signing_key }}
     {{- end }}
 
 [core]
     editor = nvim
     pager  = delta
+    hooksPath = {{ .chezmoi.homeDir }}/.config/git/hooks
 
 [init]
     defaultBranch = main
@@ -35,7 +46,9 @@
 [gpg]
     format = ssh
 [gpg "ssh"]
-    program = /opt/1Password/op-ssh-sign
+    # Wrapper context-aware (legge ssh -G del remote → sostituisce -f con
+    # la pub key del vault giusto, poi delega a op-ssh-sign).
+    program = {{ .chezmoi.homeDir }}/.local/bin/git-ssh-sign
 [interactive]
     diffFilter = delta --color-only
 

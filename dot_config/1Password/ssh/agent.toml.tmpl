@@ -1,0 +1,26 @@
+{{- /*
+  1Password SSH agent: vault discovery dinamica.
+
+  Il 1P SSH agent di default cerca SSH Key items solo in vault "Personal" /
+  "Private". Le nostre chiavi vivono in vault custom (PersonalConfiguration,
+  Work, Isypol2, …). Questo file le rende tutte raggiungibili senza dover
+  toccare la config manualmente quando aggiungi un vault nuovo.
+
+  Sorgente: .op_vault (vault default per Identity+SSH Key personali) +
+  .ssh_extra_identities (CSV di vault aggiuntivi, vedi chez.sh).
+
+  Restart 1P richiesto dopo modifiche: vedi
+  run_onchange_after_46c-1p-agent-restart-notice.sh.tmpl.
+*/ -}}
+{{- $vaults := list -}}
+{{- if .op_vault }}{{ $vaults = append $vaults .op_vault }}{{ end -}}
+{{- range (splitList "," .ssh_extra_identities) -}}
+  {{- $v := trim . -}}
+  {{- if and $v (not (has $v $vaults)) -}}
+    {{- $vaults = append $vaults $v -}}
+  {{- end -}}
+{{- end -}}
+{{ range $vaults }}
+[[ssh-keys]]
+vault = {{ . | quote }}
+{{ end }}

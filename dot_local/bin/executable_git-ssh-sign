@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Wrapper attorno a /opt/1Password/op-ssh-sign: risolve la signing key dal
+# contesto SSH del repo corrente (ssh -G $remote_host) invece di usare la key
+# globale hardcoded nel gitconfig.
+#
+# Razionale: senza wrapper, ogni commit (anche in repo work) firma con la key
+# personale (vedi 46-ssh-identities → la signingkey nel gitconfig è una sola).
+# Con questo wrapper, git interroga ssh per scoprire quale identityfile usare
+# per il host del remote, e firma con la pub key corrispondente. Cambi una
+# riga in ~/.ssh/config → next commit firma con la key giusta. Niente
+# includeIf hardcoded da mantenere.
+#
+# Failure mode: se non riesce a risolvere (no remote, no identityfile,
+# no pub key, ssh -G muto), fallback al comportamento default di op-ssh-sign
+# usando gli args originali (signingkey globale del gitconfig). Un warning
+# va su stderr ma il commit NON fallisce — meglio firmare con chiave sbagliata
+# che bloccare il flusso.
+
+set -uo pipefail
+
+# shellcheck source=/dev/null
+. "$HOME/.local/lib/git-ctx-resolve.sh"
+
+OP_SIGN="/opt/1Password/op-ssh-sign"
+
+if git_ctx_resolve && [ -n "$IDENT_PUBKEY" ]; then
+    # Sostituisci -f <key> negli args originali con $IDENT_PUBKEY.
+    # Se git non ha passato -f (gitconfig senza signingkey), aggiungiamo -f noi.
+    new_args=()
+    next_is_keyfile=0
+    saw_f=0
+    for a in "$@"; do
+        if [ "$next_is_keyfile" = "1" ]; then
+            new_args+=("$IDENT_PUBKEY")
+            next_is_keyfile=0
+            continue
+        fi
+        if [ "$a" = "-f" ]; then
+            new_args+=("-f")
+            next_is_keyfile=1
+            saw_f=1
+            continue
+        fi
+        new_args+=("$a")
+    done
+    [ "$saw_f" = "0" ] && new_args=(-f "$IDENT_PUBKEY" "${new_args[@]}")
+    exec "$OP_SIGN" "${new_args[@]}"
+fi
+
+# Fallback (con warning visibile se il resolve era atteso)
+if [ -n "${HOST:-}" ]; then
+    echo "git-ssh-sign: HOST=$HOST risolto ma pubkey non trovata, fallback a default signingkey" >&2
+fi
+exec "$OP_SIGN" "$@"
