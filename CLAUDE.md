@@ -5,6 +5,42 @@ Documentazione di sviluppo del repo `configure-work-machine`, **branch
 per la prima volta. Non duplica il README (quello è user-facing); qui c'è
 **come funziona dentro** e **come modificarlo senza romperlo**.
 
+## Handoff context (2026-06-02 — sessione Claude su 192.168.188.179)
+
+Lavoro recente sul branch `cachy-niri`, agente prossimo (opencode dal portatile o
+Claude nuova chat) deve sapere:
+
+**Macchina test:** `osharko@192.168.188.179` (Dell, CachyOS, AMD Krackan, schermo
+HiDPI 2560x1600). NOPASSWD sudo abilitato → puoi `ssh` + comandi privilegiati liberi.
+Niri+Noctalia v5 girano in produzione tramite `noctalia-init.sh` (NON via chezmoi
+completo). Setup:
+- agetty autologin su tty1 → fish (no shell hook) → user@1000.service via PAM
+- `~/.config/systemd/user/niri-session.service` (`WantedBy=default.target`)
+- linger DISABILITATO (causava race condition: user@ partiva a boot prima che tty1 avesse seat0)
+- niri-session script fast-path: detecta MANAGERPID systemd-user → exec niri --session diretto
+
+**Noctalia v5 (non v4):** rewrite completo C++/OpenGL ES via `lionheartp/Hyprland`
+COPR (`noctalia-git`). NO plugin .qml (sono v4-only). v5 ha "Scripted Widgets" in Luau.
+I 3 script del repo `02b-noctalia-plugin-prefetch`, `03-noctalia-refresh`,
+`05-prereq-cleanup` hanno guard `if noctalia-version >= 5 → exit 0` — NON tentare di
+forzarli su v5, vanno solo aggiornati come Luau widgets se servono custom.
+
+**`noctalia-init.sh` (root del repo):** standalone quick-install niri+noctalia+
+greetd+ghostty + setup completo autologin/dark-mode/portal/rounded/no-titlebar.
+Idempotente. Lanciato via `bash -c "$(curl ... noctalia-init.sh)"`. Sostituisce
+`chez.sh` quando vuoi solo DE base senza dotfiles/profili/chezmoi.
+
+**`chez.sh` (in ~ utente, NON nel repo):** bootstrap MASSIVO completo (1Password +
+chezmoi + tutti i run_once/run_onchange). Usalo SOLO per setup work-machine totale
+da zero, con 1Password vault già pronto.
+
+**Cose non ancora portate in script (decidere se aggiungere o lasciare manuale):**
+- chafa/viu (image-in-terminal) — non aggiunti, decidere chez.sh vs noctalia-init.sh
+- Display scale 1.5 (HiDPI default) — utente preferisce 1.5, lasciato così
+- Custom keybinds personalizzati (Mod+B brave, Mod+E nautilus) → niri default
+  config sovrascrive il nostro al primo run. Da risolvere con write più aggressivo
+  o config dichiarativa via chezmoi
+
 ## Deploy model
 
 **ZIP-throwaway** (bootstrap.sh): macchina utente NON ha repo locale

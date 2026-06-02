@@ -109,6 +109,12 @@ else
     echo "✓ niri config con spawn-at-startup noctalia già configurato"
 fi
 
+# Rounded corners: attiva window-rule geometry-corner-radius (commentata di default)
+if grep -q '^/-window-rule {$' "$NIRI_CONFIG" && grep -q 'geometry-corner-radius' "$NIRI_CONFIG"; then
+    sed -i 's|^/-window-rule {$|window-rule {|' "$NIRI_CONFIG"
+    echo "✓ rounded corners attivati (geometry-corner-radius 12)"
+fi
+
 # ─── 6. Ghostty: rimuovi titlebar GTK (default ha CSD = macOS-style buttons) ─
 mkdir -p ~/.config/ghostty
 # Cleanup vecchio nome sbagliato se presente
@@ -120,8 +126,12 @@ if [[ ! -f "$GHOSTTY_CONFIG" ]] || ! grep -q "window-decoration" "$GHOSTTY_CONFI
 window-decoration = false
 gtk-titlebar = false
 gtk-tabs-location = hidden
+
+# Trasparenza background (0.0 trasparente → 1.0 opaco), con blur dietro.
+background-opacity = 0.85
+background-blur-radius = 20
 EOF
-    echo "✓ ghostty config (no titlebar/tabs)"
+    echo "✓ ghostty config (no titlebar/tabs + opacity 0.85 + blur)"
 else
     echo "✓ ghostty config già presente"
 fi
