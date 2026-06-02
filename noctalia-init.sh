@@ -109,6 +109,23 @@ else
     echo "✓ niri config con spawn-at-startup noctalia già configurato"
 fi
 
+# ─── 6. Dark mode (GTK/GNOME apps su niri) ─────────────────────────────────
+# Senza queste settings, app GTK4 (nautilus, ecc.) vanno in light mode di
+# default anche se l'utente preferisce dark. Niri non ha un DE-wide setting,
+# servono:
+#   - gsettings color-scheme=prefer-dark (dconf key che xdg-desktop-portal espone)
+#   - ~/.config/xdg-desktop-portal/niri-portals.conf (dice a portal di usare gtk backend)
+echo "→ dark mode + portal config"
+gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+
+mkdir -p ~/.config/xdg-desktop-portal
+cat > ~/.config/xdg-desktop-portal/niri-portals.conf <<EOF
+[preferred]
+default=gtk
+org.freedesktop.impl.portal.Settings=gtk
+EOF
+echo "✓ color-scheme=prefer-dark + niri-portals.conf"
+
 # ─── Done ───────────────────────────────────────────────────────────────────
 echo ""
 echo "✓ Setup completato."
