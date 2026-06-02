@@ -8,9 +8,10 @@
 #      → PAM session → seat0 → user@1000.service)
 #   3. ~/.config/systemd/user/niri-session.service (WantedBy=default.target)
 #   4. systemctl --user enable niri-session.service
-#   5. loginctl enable-linger osharko (user@ parte a boot)
 #
-# Boot flow: agetty autologin → login PAM → fish (no hack) + user@1000.service
+# Boot flow: agetty autologin → login PAM → seat0 attivo + user@1000.service
+# (triggered da PAM, NON da linger — il linger causa race condition: user@
+# parte a boot prima che tty1 abbia seat0 → niri panic → start-limit-hit)
 # → niri-session.service triggers → niri-session script in systemd-user context
 # → fast-path detects MANAGERPID systemd-user → exec niri --session diretto.
 #
@@ -74,12 +75,14 @@ systemctl --user daemon-reload
 systemctl --user enable niri-session.service >/dev/null 2>&1
 echo "✓ systemctl --user enable niri-session.service"
 
+# NB: niente linger. user@1000 deve partire al PAM login (agetty autologin
+# → login → PAM session attiva seat0 → user@ start), non a boot. Linger
+# faceva partire niri-session.service PRIMA che tty1 avesse seat0 → panic.
 if loginctl show-user "$USER" 2>/dev/null | grep -q "Linger=yes"; then
-    echo "✓ linger già attivo per $USER"
-else
-    sudo loginctl enable-linger "$USER"
-    echo "✓ loginctl enable-linger $USER"
+    echo "→ linger attivo → disabilito (race condition con autologin tty1)"
+    sudo loginctl disable-linger "$USER"
 fi
+echo "✓ linger=no per $USER (user@ via PAM login)"
 
 # ─── 5. niri config + spawn-at-startup noctalia ─────────────────────────────
 NIRI_CONFIG=~/.config/niri/config.kdl
