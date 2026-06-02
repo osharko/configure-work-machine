@@ -51,6 +51,10 @@ fi
 
 # ─── 3. Shell hook → exec niri-session su tty1 ──────────────────────────────
 SHELL_NAME=$(basename "$SHELL")
+# NB: niri-session re-execs come login shell (vedi /usr/bin/niri-session).
+# Senza guard env var, l'hook scatena loop infinito (fish→exec niri-session→
+# niri-session→exec -l fish→hook fa exec niri-session→loop).
+# NIRI_AUTOSTART_GUARD viene esportato → presente al re-exec → blocca seconda fire.
 MARKER="spawn niri-session on tty1"
 
 case "$SHELL_NAME" in
@@ -58,8 +62,11 @@ case "$SHELL_NAME" in
         SHELL_CONFIG=~/.config/fish/config.fish
         SHELL_SNIPPET='
 # '"$MARKER"'
+# Guard: niri-session re-execs login shell, evita loop con env var.
 if not set -q WAYLAND_DISPLAY
+    and not set -q NIRI_AUTOSTART_GUARD
     and test (tty) = /dev/tty1
+    set -gx NIRI_AUTOSTART_GUARD 1
     exec niri-session
 end'
         ;;
@@ -67,7 +74,9 @@ end'
         SHELL_CONFIG=~/.bash_profile
         SHELL_SNIPPET='
 # '"$MARKER"'
-if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+# Guard: niri-session re-execs login shell, evita loop con env var.
+if [ -z "$WAYLAND_DISPLAY" ] && [ -z "${NIRI_AUTOSTART_GUARD:-}" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    export NIRI_AUTOSTART_GUARD=1
     exec niri-session
 fi'
         ;;
@@ -75,7 +84,11 @@ fi'
         SHELL_CONFIG=~/.zprofile
         SHELL_SNIPPET='
 # '"$MARKER"'
-[[ -z $WAYLAND_DISPLAY && $(tty) == /dev/tty1 ]] && exec niri-session'
+# Guard: niri-session re-execs login shell, evita loop con env var.
+if [[ -z $WAYLAND_DISPLAY && -z ${NIRI_AUTOSTART_GUARD:-} && $(tty) == /dev/tty1 ]]; then
+    export NIRI_AUTOSTART_GUARD=1
+    exec niri-session
+fi'
         ;;
     *)
         echo "⚠ shell '$SHELL_NAME' non supportata (atteso fish/bash/zsh). Skip shell hook."
@@ -85,8 +98,25 @@ esac
 
 if [[ -n "$SHELL_CONFIG" ]]; then
     mkdir -p "$(dirname "$SHELL_CONFIG")"
-    if grep -q "$MARKER" "$SHELL_CONFIG" 2>/dev/null; then
-        echo "✓ shell hook ($SHELL_NAME) già presente in $SHELL_CONFIG"
+    # Se esiste vecchia versione senza guard, rimuovila per ri-aggiungerla corretta
+    if [[ -f "$SHELL_CONFIG" ]] && grep -q "$MARKER" "$SHELL_CONFIG" && ! grep -q "NIRI_AUTOSTART_GUARD" "$SHELL_CONFIG"; then
+        echo "→ rilevato vecchio hook ($SHELL_NAME) senza guard → rimuovo"
+        case "$SHELL_NAME" in
+            fish)
+                awk '/^# '"$MARKER"'$/ {skip=1; next} skip && /^end$/ {skip=0; next} skip {next} {print}' "$SHELL_CONFIG" > "$SHELL_CONFIG.new"
+                ;;
+            bash)
+                awk '/^# '"$MARKER"'$/ {skip=1; next} skip && /^fi$/ {skip=0; next} skip {next} {print}' "$SHELL_CONFIG" > "$SHELL_CONFIG.new"
+                ;;
+            zsh)
+                awk '/^# '"$MARKER"'$/ {skip=1; next} skip && /^\[\[/ {skip=0; print; next} skip {next} {print}' "$SHELL_CONFIG" > "$SHELL_CONFIG.new"
+                ;;
+        esac
+        mv "$SHELL_CONFIG.new" "$SHELL_CONFIG"
+    fi
+
+    if grep -q "NIRI_AUTOSTART_GUARD" "$SHELL_CONFIG" 2>/dev/null; then
+        echo "✓ shell hook ($SHELL_NAME) con guard già presente"
     else
         echo "→ aggiungo shell hook ($SHELL_NAME) a $SHELL_CONFIG"
         echo "$SHELL_SNIPPET" >> "$SHELL_CONFIG"
