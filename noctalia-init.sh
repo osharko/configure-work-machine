@@ -115,6 +115,31 @@ if grep -q '^/-window-rule {$' "$NIRI_CONFIG" && grep -q 'geometry-corner-radius
     echo "✓ rounded corners attivati (geometry-corner-radius 12)"
 fi
 
+# Terminal opacity focus-dependent (NIRI livello → vale per qualsiasi terminale)
+# Unfocused 0.85 (più trasparente), focused 0.95 (più opaco).
+# Cleaner di app-level opacity (no green artifact, uniform su tutti i terminali).
+if ! grep -q '# terminal-opacity-rule' "$NIRI_CONFIG"; then
+    cat >> "$NIRI_CONFIG" <<'EOF'
+
+// terminal-opacity-rule — trasparenza focus-dependent per i terminali.
+window-rule {
+    match app-id="com.mitchellh.ghostty"
+    match app-id="Alacritty"
+    match app-id="kitty"
+    match app-id="foot"
+    opacity 0.85
+}
+window-rule {
+    match app-id="com.mitchellh.ghostty" is-focused=true
+    match app-id="Alacritty" is-focused=true
+    match app-id="kitty" is-focused=true
+    match app-id="foot" is-focused=true
+    opacity 0.95
+}
+EOF
+    echo "✓ niri terminal-opacity-rule (0.85 unfocused → 0.95 focused)"
+fi
+
 # ─── 6. Ghostty: rimuovi titlebar GTK (default ha CSD = macOS-style buttons) ─
 mkdir -p ~/.config/ghostty
 # Cleanup vecchio nome sbagliato se presente
@@ -123,15 +148,13 @@ GHOSTTY_CONFIG=~/.config/ghostty/config
 if [[ ! -f "$GHOSTTY_CONFIG" ]] || ! grep -q "window-decoration" "$GHOSTTY_CONFIG"; then
     cat > "$GHOSTTY_CONFIG" <<EOF
 # Nasconde titlebar GTK e tab bar (look pulito tile-mode niri).
+# NB: trasparenza NON qui — gestita da niri window-rule focus-dependent (sotto).
+# background-opacity + blur in ghostty causava green artifact su AMD Krackan.
 window-decoration = false
 gtk-titlebar = false
 gtk-tabs-location = hidden
-
-# Trasparenza background (0.0 trasparente → 1.0 opaco), con blur dietro.
-background-opacity = 0.85
-background-blur-radius = 20
 EOF
-    echo "✓ ghostty config (no titlebar/tabs + opacity 0.85 + blur)"
+    echo "✓ ghostty config (no titlebar/tabs)"
 else
     echo "✓ ghostty config già presente"
 fi
