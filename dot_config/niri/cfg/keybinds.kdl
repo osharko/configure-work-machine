@@ -10,14 +10,15 @@ binds {
 
     // ─── Applications ───
     Mod+Return                          hotkey-overlay-title="Open Terminal: Alacritty" { spawn "alacritty"; }
-    Mod+Space                           hotkey-overlay-title="Open App Launcher: noctalia launcher" { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
-    Mod+Shift+W                         hotkey-overlay-title="Next Wallpaper (random)" { spawn-sh "qs -c noctalia-shell ipc call wallpaper random ''"; }
+    Mod+Space                           hotkey-overlay-title="Open App Launcher: noctalia launcher" { spawn "noctalia" "msg" "panel-toggle" "launcher"; }
+    Mod+Shift+W                         hotkey-overlay-title="Next Wallpaper (random)" { spawn "noctalia" "msg" "wallpaper-random"; }
     Mod+B                               hotkey-overlay-title="Open Browser (default)" { spawn-sh "xdg-open https:"; }
-    Mod+ALT+L                           hotkey-overlay-title="Lock Screen: noctalia lock" { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
-    Mod+L                               hotkey-overlay-title="Lock Screen (alias)" { spawn-sh "qs -c noctalia-shell ipc call lockScreen lock"; }
-    Mod+Shift+Q                         hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
-    Mod+Escape                          hotkey-overlay-title="Session Menu (omarchy-style)" { spawn-sh "qs -c noctalia-shell ipc call sessionMenu toggle"; }
-    Mod+K                               hotkey-overlay-title="Show Keybinds Cheatsheet (Noctalia plugin)" { spawn-sh "qs -c noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
+    Mod+ALT+L                           hotkey-overlay-title="Lock Screen: noctalia lock" { spawn "noctalia" "msg" "session" "lock"; }
+    Mod+L                               hotkey-overlay-title="Lock Screen (alias)" { spawn "noctalia" "msg" "session" "lock"; }
+    Mod+Shift+Q                         hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn "noctalia" "msg" "panel-toggle" "session-menu"; }
+    Mod+Escape                          hotkey-overlay-title="Session Menu (omarchy-style)" { spawn "noctalia" "msg" "panel-toggle" "session-menu"; }
+    // Mod+K → cheatsheet plugin v4 (rimosso, v5 non ha plugin API equivalente)
+    // Mod+K                            { spawn-sh "qs -c noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
 
     // Please choose your own file manager.
     Mod+E                               hotkey-overlay-title="File Manager: Nautilus" { spawn "nautilus"; }
@@ -34,18 +35,18 @@ binds {
     Mod+ALT+9                           hotkey-overlay-title="Dock #9 (pinned)" { spawn-sh "~/.local/bin/dock-launch 9"; }
 
     // ─── Media Controls ───
-    XF86AudioRaiseVolume                allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume increase"; }
-    XF86AudioLowerVolume                allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume decrease"; }
-    XF86AudioMute                       allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume muteOutput"; }
-    XF86AudioMicMute                    allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call volume muteInput"; }
-    XF86AudioNext                       allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media next"; }
-    XF86AudioPrev                       allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media previous"; }
-    XF86AudioPlay                       allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media playPause"; }
-    XF86AudioPause                      allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call media playPause"; }
+    XF86AudioRaiseVolume                allow-when-locked=true { spawn "noctalia" "msg" "volume-up"; }
+    XF86AudioLowerVolume                allow-when-locked=true { spawn "noctalia" "msg" "volume-down"; }
+    XF86AudioMute                       allow-when-locked=true { spawn "noctalia" "msg" "volume-mute"; }
+    XF86AudioMicMute                    allow-when-locked=true { spawn "noctalia" "msg" "mic-mute"; }
+    XF86AudioNext                       allow-when-locked=true { spawn "noctalia" "msg" "media" "next"; }
+    XF86AudioPrev                       allow-when-locked=true { spawn "noctalia" "msg" "media" "previous"; }
+    XF86AudioPlay                       allow-when-locked=true { spawn "noctalia" "msg" "media" "toggle"; }
+    XF86AudioPause                      allow-when-locked=true { spawn "noctalia" "msg" "media" "toggle"; }
 
     // ─── Brightness Controls ───
-    XF86MonBrightnessUp                 allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call brightness increase"; }
-    XF86MonBrightnessDown               allow-when-locked=true { spawn-sh "qs -c noctalia-shell ipc call brightness decrease"; }
+    XF86MonBrightnessUp                 allow-when-locked=true { spawn "noctalia" "msg" "brightness-up"; }
+    XF86MonBrightnessDown               allow-when-locked=true { spawn "noctalia" "msg" "brightness-down"; }
 
     // ─── Window Movement and Focus ───
     Mod+Q                               { close-window; }

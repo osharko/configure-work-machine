@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# [V4-ONLY — DEPRECATO] quickshell mainline → noctalia-qs swap.
+#
+# Necessario solo per Noctalia v4.7+ (richiedeva un fork custom di quickshell).
+# Su Noctalia v5 il fork non serve più — la pipeline è C++/OpenGL standalone.
+#
+# Questo script vive in v4-old/ per riferimento; NON viene applicato da chezmoi
+# (cartella ignorata in .chezmoiignore.tmpl).
+set -euo pipefail
+
+# Guard v4-only
+if command -v noctalia >/dev/null 2>&1; then
+    _nv=$(noctalia --version 2>/dev/null | grep -oP "v\K[0-9]+" | head -1)
+    if [ "${_nv:-4}" -ge 5 ]; then
+        echo "→ Noctalia v${_nv} (v5+) rilevato → skip noctalia-qs swap (v4-only)"
+        exit 0
+    fi
+fi
+
+if pacman -Q quickshell &>/dev/null && ! pacman -Q noctalia-qs &>/dev/null; then
+    echo "→ quickshell mainline installato → rimuovo (sostituito da noctalia-qs)"
+    sudo pacman -Rdd --noconfirm quickshell || true
+fi
+
+echo "✓ quickshell→noctalia-qs swap (v4) completo"

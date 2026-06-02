@@ -6,27 +6,8 @@
 #   has_fingerprint = {{ .has_fingerprint }}
 set -euo pipefail
 
-# ─── Guard v4-only: skip noctalia-qs swap se Noctalia >= v5 ─────────────────
-# v5 usa quickshell STANDARD (no fork noctalia-qs). Su v5 il swap qui sotto
-# rimuoverebbe quickshell ma poi non installerebbe noctalia-qs (v5 non lo vuole),
-# lasciando il sistema in stato rotto.
-if command -v noctalia >/dev/null 2>&1; then
-    _nv=$(noctalia --version 2>/dev/null | grep -oP "v\K[0-9]+" | head -1)
-    if [ "${_nv:-4}" -ge 5 ]; then
-        echo "→ Noctalia v${_nv} (v5+) rilevato → skip noctalia-qs swap (v4-only)"
-        exit 0
-    fi
-fi
-
-# ─── quickshell mainline vs noctalia-qs ─────────────────────────────────────
-# Il nostro packages.yaml installa `noctalia-qs` (build custom indispensabile
-# per noctalia-shell 4.7+). Se la macchina ha già `quickshell` mainline
-# installato (es. residuo di un setup precedente), paru -Syu fallisce con
-# "conflict noctalia-qs vs quickshell". Rimuovi quickshell prima.
-if pacman -Q quickshell &>/dev/null && ! pacman -Q noctalia-qs &>/dev/null; then
-    echo "→ quickshell mainline installato → rimuovo (sostituito da noctalia-qs)"
-    sudo pacman -Rdd --noconfirm quickshell || true
-fi
+# NB: lo swap quickshell→noctalia-qs (necessario per Noctalia v4.7+) è in
+# v4-old/run_onchange_before_05a-noctalia-qs-swap.sh.tmpl — ignorato da chezmoi.
 
 {{- if .has_fingerprint }}
 
