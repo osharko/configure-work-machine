@@ -109,7 +109,24 @@ else
     echo "✓ niri config con spawn-at-startup noctalia già configurato"
 fi
 
-# ─── 6. Dark mode (GTK/GNOME apps su niri) ─────────────────────────────────
+# ─── 6. Ghostty: rimuovi titlebar GTK (default ha CSD = macOS-style buttons) ─
+mkdir -p ~/.config/ghostty
+# Cleanup vecchio nome sbagliato se presente
+rm -f ~/.config/ghostty/config.ghostty
+GHOSTTY_CONFIG=~/.config/ghostty/config
+if [[ ! -f "$GHOSTTY_CONFIG" ]] || ! grep -q "window-decoration" "$GHOSTTY_CONFIG"; then
+    cat > "$GHOSTTY_CONFIG" <<EOF
+# Nasconde titlebar GTK e tab bar (look pulito tile-mode niri).
+window-decoration = false
+gtk-titlebar = false
+gtk-tabs-location = hidden
+EOF
+    echo "✓ ghostty config (no titlebar/tabs)"
+else
+    echo "✓ ghostty config già presente"
+fi
+
+# ─── 7. Dark mode (GTK/GNOME apps su niri) ─────────────────────────────────
 # Senza queste settings, app GTK4 (nautilus, ecc.) vanno in light mode di
 # default anche se l'utente preferisce dark. Niri non ha un DE-wide setting,
 # servono:
