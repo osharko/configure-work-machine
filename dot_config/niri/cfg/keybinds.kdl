@@ -15,8 +15,8 @@ binds {
     Mod+B                               hotkey-overlay-title="Open Browser (default)" { spawn-sh "xdg-open https:"; }
     Mod+ALT+L                           hotkey-overlay-title="Lock Screen: noctalia lock" { spawn "noctalia" "msg" "session" "lock"; }
     Mod+L                               hotkey-overlay-title="Lock Screen (alias)" { spawn "noctalia" "msg" "session" "lock"; }
-    Mod+Shift+Q                         hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn "noctalia" "msg" "panel-toggle" "session-menu"; }
-    Mod+Escape                          hotkey-overlay-title="Session Menu (omarchy-style)" { spawn "noctalia" "msg" "panel-toggle" "session-menu"; }
+    Mod+Shift+Q                         hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn "noctalia" "msg" "panel-toggle" "session"; }
+    Mod+Escape                          hotkey-overlay-title="Session Menu (omarchy-style)" { spawn "noctalia" "msg" "panel-toggle" "session"; }
     // Mod+K → cheatsheet plugin v4 (rimosso, v5 non ha plugin API equivalente)
     // Mod+K                            { spawn-sh "qs -c noctalia-shell ipc call plugin:keybind-cheatsheet toggle"; }
 
