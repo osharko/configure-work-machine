@@ -18,6 +18,17 @@
 #   plugins: {{ .noctalia_plugins | toJson | sha256sum }}
 set -euo pipefail
 
+# ─── Guard v4-only: skip se Noctalia >= v5 ──────────────────────────────────
+# Pre-fetch dei plugin v4-system (noctalia-plugins repo). v5 ha plugin API
+# diversa (C++/OpenGL rewrite) → applicarlo qui o non serve o rompe.
+if command -v noctalia >/dev/null 2>&1; then
+    _nv=$(noctalia --version 2>/dev/null | grep -oP "v\K[0-9]+" | head -1)
+    if [ "${_nv:-4}" -ge 5 ]; then
+        echo "→ Noctalia v${_nv} (v5+) rilevato → skip plugin-prefetch (v4-only)"
+        exit 0
+    fi
+fi
+
 NOCTALIA_PLUGINS_DIR="$HOME/.config/noctalia/plugins"
 UPSTREAM_REPO="https://github.com/noctalia-dev/noctalia-plugins"
 

@@ -24,6 +24,17 @@ exit 0
 {{- else }}
 set -euo pipefail
 
+# ─── Guard v4-only: skip refresh settings/plugins.json se Noctalia >= v5 ────
+# v4 settings.json layout (bar.widgets.right, plugin manifest, ecc) e
+# plugins.json non esistono in v5. Refresh → corruption / restart fallito.
+if command -v noctalia >/dev/null 2>&1; then
+    _nv=$(noctalia --version 2>/dev/null | grep -oP "v\K[0-9]+" | head -1)
+    if [ "${_nv:-4}" -ge 5 ]; then
+        echo "→ Noctalia v${_nv} (v5+) rilevato → skip refresh (schema v4-only)"
+        exit 0
+    fi
+fi
+
 NOCTALIA_DIR="$HOME/.config/noctalia"
 TS=$(date +%s)
 
