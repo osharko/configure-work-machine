@@ -15,7 +15,21 @@ Setup riproducibile per **CachyOS + Niri + Noctalia**, gestito con
 
 ## Onboarding macchina nuova
 
-### Una-tantum, da macchina vergine
+### Quick-install niri + noctalia (NO setup completo)
+
+Solo `niri` + `noctalia-git` via paru, senza chezmoi, senza dotfiles, senza profili.
+Utile per dev box di test o sistemi minimal.
+
+```sh
+bash -c "$(curl -sL https://raw.githubusercontent.com/osharko/configure-work-machine/cachy-niri/noctalia-init.sh)"
+```
+
+Prerequisito: `paru` già installato. Lo script suggerisce a fine output
+come configurare autologin + auto-spawn niri-session su tty1.
+
+### Setup completo macchina (chezmoi + profili + dotfiles)
+
+Da macchina vergine:
 
 ```sh
 bash -c "$(curl -sL https://raw.githubusercontent.com/osharko/configure-work-machine/cachy-niri/bootstrap.sh)"
