@@ -72,9 +72,6 @@ end
 abbr -a vim 'nvim'
 abbr -a vi  'nvim'
 
-# paru-mise: paru con --assume-installed dai tool mise (evita doppia install)
-abbr -a paru 'paru-mise'
-
 # Distrobox: dx <name> per entrare in qualunque container
 abbr -a dx     'distrobox enter'
 abbr -a dxl    'distrobox list'

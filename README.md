@@ -9,7 +9,7 @@ Setup riproducibile per **CachyOS + Niri + Noctalia**, gestito con
 
 - **Identità**: 1Password (default) **oppure** `~/.config/configure-work-machine/secrets.env` (no-1P)
 - **Host-specific**: `~/.config/configure-work-machine/config.env` (flag e profili)
-- **Pacchetti**: pacman + AUR + chaotic-aur via **paru-mise**, filtrati per profili
+- **Pacchetti**: pacman + AUR + chaotic-aur via **paru**, filtrati per profili
 - **Moduli opzionali** scelti al primo run: profili installazione (base/dev/work/gaming/mediacenter),
   Noctalia config, wallpapers
 

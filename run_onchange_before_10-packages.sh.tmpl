@@ -44,7 +44,7 @@ if [ -z "$AUR_HELPER" ]; then
     exit 1
 fi
 
-# Strippa mise dal PATH (vedi paru-mise rationale): i PKGBUILD AUR Python/Node
+# Strippa mise dal PATH: i PKGBUILD AUR Python/Node
 # si installano nel prefix del binario che vedono in PATH. Se è mise, collidono
 # con i file gestiti da mise. Forziamo /usr/bin a vincere.
 export PATH=$(echo "$PATH" | tr ':' '\n' \

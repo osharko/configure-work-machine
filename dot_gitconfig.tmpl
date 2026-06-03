@@ -13,8 +13,6 @@
     name  = {{ .git_name }}
     email = {{ .email }}
     {{- if .signing_key }}
-    # Signing SSH default — il wrapper git-ssh-sign sostituisce con la key
-    # del vault giusto in base al remote del repo (ssh -G driven).
     signingkey = {{ .signing_key }}
     {{- end }}
 
@@ -42,12 +40,9 @@
     gpgsign = {{ if .signing_key }}true{{ else }}false{{ end }}
 [tag]
     gpgsign = {{ if .signing_key }}true{{ else }}false{{ end }}
-
 [gpg]
     format = ssh
 [gpg "ssh"]
-    # Wrapper context-aware (legge ssh -G del remote → sostituisce -f con
-    # la pub key del vault giusto, poi delega a op-ssh-sign).
     program = {{ .chezmoi.homeDir }}/.local/bin/git-ssh-sign
 [interactive]
     diffFilter = delta --color-only

@@ -215,11 +215,11 @@ applica i gating (`work_only` only if `.is_work_machine`), e lancia un unico
 
 ### Conventions critiche (vedi anche memorie Claude)
 
-- **Mai `sudo pacman -S` o `paru` nudo** → sempre `paru-mise` (wrapper in
-  `dot_local/bin/`) che strippa `~/.local/share/mise/{installs,shims}` dal PATH
-  per evitare conflitti con il prefix di mise quando build pkg Python AUR.
+- **Mai `sudo pacman -S` o `paru` nudo** → lo script `10-packages` strippa
+  `~/.local/share/mise/{installs,shims}` dal PATH per evitare conflitti con il
+  prefix di mise quando build pkg Python AUR.
 - **chaotic-aur è abilitato come repo** (script `02-chaotic-aur`) → AUR popolari
-  arrivano precompilati. Per ogni nuovo pkg AUR: `paru-mise -Si <pkg>` e
+  arrivano precompilati. Per ogni nuovo pkg AUR: `paru -Si <pkg>` e
   controlla `Repository:` — se chaotic-aur, niente compile.
 - **Patch transient** (sed in-place su file di sistema) ammesse SOLO se
   accompagnate da `run_onchange` idempotente + condizionale grep-su-pattern
@@ -257,10 +257,9 @@ I PKGBUILD AUR per pkg Python fanno `python -m build` e si installano nel prefix
 del primo `python` in PATH. Se mise's python è in PATH (`~/.local/share/mise/...`),
 i pkg ci si installano e **collidono con i file gestiti da mise** (`python-tree-sitter` etc.).
 
-Fix in `paru-mise` (wrapper): strippa mise dal PATH per il subprocess paru +
+Fix in `10-packages`: strippa mise dal PATH per il subprocess paru +
 mantiene `--assume-installed` per evitare che paru tenti di installare runtime
-duplicati da pacman. Lo script `10-packages` fa lo stesso strip inline (perché
-viene eseguito prima che paru-mise sia stato copiato come file).
+duplicati da pacman.
 
 ### sudo NOPASSWD + `sudo -v`
 
@@ -361,7 +360,7 @@ memoria utente.
    - In AUR only (build locale) → `aur.<categoria>`
    - Flatpak → `flatpak:`
 2. Aggiungi voce + commento se non-ovvio
-3. `paru-mise -Si <pkg>` per smoke test (e per verificare se in chaotic-aur)
+3. `paru -Si <pkg>` per smoke test (e per verificare se in chaotic-aur)
 4. `chezmoi apply` (lo script 10-packages ha hash trigger su packages.yaml)
 
 ### Aggiungere uno script chezmoi
