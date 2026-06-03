@@ -25,7 +25,6 @@ PAC_PKGS=(
 AUR_PKGS=(
 {{- range $cat := .aur_sections }}
   {{- $skip := false -}}
-  {{- if and (eq $cat "hardware_dell") (not $.has_fingerprint) }}{{- $skip = true -}}{{- end }}
   {{- if and (eq $cat "work_only") (not $.is_work_machine) }}{{- $skip = true -}}{{- end }}
   {{- if not $skip }}
   # --- aur/{{ $cat }} ---

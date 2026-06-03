@@ -201,7 +201,6 @@ aur:
   utils: [...]         # quickemu-git, boxbuddy, ventoy
   fonts: [...]
   gaming: [...]
-  hardware_dell: [...] # gated da .has_fingerprint (libfprint-tod)
   work_only: [...]     # gated da .is_work_machine (forticlient-vpn, harlequin)
 flatpak: [...]
 noctalia_plugins: [...]

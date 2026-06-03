@@ -6,7 +6,7 @@
 # Niente `extends`: per chiarezza ogni profilo elenca esplicitamente TUTTE le
 # proprie sezioni. Cambia un profilo? Cambia solo qui.
 #
-# Gating ulteriore (work_only, hardware_dell) resta gestito dai flag .env
+# Gating ulteriore (work_only) resta gestito dai flag .env
 # (is_work_machine / has_fingerprint) in run_onchange_before_10-packages.
 
 profiles:

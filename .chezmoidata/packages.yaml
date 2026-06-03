@@ -170,10 +170,6 @@ aur:
     # Re-add se il maintainer AUR fixa: rimetti steam-native-runtime + i 2 libjpeg6
     # NB: Google Stadia controller — rumble/HID built-in kernel (hid-google-stadiaff)
     # Steam Controller — built-in (hid-steam).
-  hardware_dell:
-    - libfprint-2-tod1-broadcom-cv3plus
-    - libfprint-tod
-    # libfprint-tod-debug rimosso (orfano in AUR)
   work_only:
     # Installati solo se .is_work_machine == true (gated nel template 10-packages)
     - forticlient-vpn   # VPN aziendale Fortinet

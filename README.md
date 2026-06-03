@@ -353,8 +353,7 @@ INSTALL_PROFILES="base,dev,work,gaming"  # tutto
 `10-packages` itera solo quelle sezioni.
 
 Gating ulteriore: `work_only` (k8s/SQL TUI/VPN) richiede `INSTALL_PROFILES`
-contenga `work` (auto-derivato `is_work_machine=true`). `hardware_dell`
-(libfprint) richiede `HAS_FINGERPRINT=true`.
+contenga `work` (auto-derivato `is_work_machine=true`).
 
 ### Aggiungere un pacchetto
 
