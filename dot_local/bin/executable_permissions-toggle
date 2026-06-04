@@ -77,27 +77,23 @@ off_autologin_tty() {
 }
 
 status_noctalia_lock_on_boot() {
-    grep -q 'lockScreen lock' "$HOME/.config/niri/cfg/autostart.kdl" 2>/dev/null && echo on || echo off
+    grep -q 'noctalia msg session lock' "$HOME/.config/niri/cfg/autostart.kdl" 2>/dev/null && echo on || echo off
 }
 
 on_noctalia_lock_on_boot() {
     AUTO="$HOME/.config/niri/cfg/autostart.kdl"
-    if ! grep -q 'lockScreen lock' "$AUTO" 2>/dev/null; then
-        # Append spawn al niri autostart: dopo 2s lock Noctalia (così entra Noctalia
-        # come fosse il display manager)
+    if ! grep -q 'noctalia msg session lock' "$AUTO" 2>/dev/null; then
         cat >> "$AUTO" <<'EOF'
 
     // [system-toggles] Noctalia lock al boot (workaround: niente SDDM)
-    spawn-sh-at-startup "sleep 2 && qs -c noctalia-shell ipc call lockScreen lock"
+    spawn-sh-at-startup "sleep 2 && noctalia msg session lock"
 EOF
     fi
 }
 
 off_noctalia_lock_on_boot() {
     AUTO="$HOME/.config/niri/cfg/autostart.kdl"
-    # Rimuove il commento + il spawn (4 righe blocco)
-    sed -i '/\[system-toggles\] Noctalia lock al boot/,/qs.*lockScreen lock/d' "$AUTO"
-    # Cleanup riga vuota orfana
+    sed -i '/\[system-toggles\] Noctalia lock al boot/,/noctalia msg session lock/d' "$AUTO"
     sed -i '/^$/N;/^\n$/d' "$AUTO"
 }
 
