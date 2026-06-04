@@ -18,8 +18,8 @@ if ! sudo grep -q "//linux-cachyos$" "$LIMINE" 2>/dev/null; then
     exit 0
 fi
 
-# Estraggo blocco entry linux-cachyos (fino a riga vuota o EOF) e cerco il param
-if sudo sed -n '/\/\/linux-cachyos$/,/^$/p' "$LIMINE" | grep -q "$PARAM"; then
+# Verifico se il param è già presente in una entry kernel (non snapshot)
+if sudo grep -q "rootflags=subvol=/@ .* $PARAM" "$LIMINE" 2>/dev/null; then
     echo "✓ amdgpu PSR disable già presente in $LIMINE"
     exit 0
 fi
@@ -28,8 +28,9 @@ BACKUP="$LIMINE.bak.$(date +%s)"
 sudo cp "$LIMINE" "$BACKUP"
 echo "→ backup creato: $BACKUP"
 
-# Aggiungo $PARAM in coda alla riga `cmdline:` della entry linux-cachyos
-sudo sed -i '/\/\/linux-cachyos$/,/^$/{/^[[:space:]]*cmdline:/{/'"$PARAM"'/!s|$| '"$PARAM"'|}}' "$LIMINE"
+# Aggiungo $PARAM in coda alla riga `cmdline:` delle entry kernel (linux-cachyos + lts)
+# Matcha solo rootflags=subvol=/@ seguito da spazio (esclude snapshot che hanno /@/.snapshots/)
+sudo sed -i '/rootflags=subvol=\/@ /{'"$PARAM"'/!s|$| '"$PARAM"'|}' "$LIMINE"
 
 echo "→ amdgpu PSR disable applicato in $LIMINE (reboot per attivare)"
 {{- else -}}
