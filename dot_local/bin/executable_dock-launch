@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lancia il pinned dock #N di Noctalia.
-# Legge ~/.config/noctalia/settings.json → dock.pinnedApps[N-1]
+# v5: legge ~/.local/state/noctalia/settings.toml → dock.pinned[N-1]
 # Risolve il desktop-id via gtk-launch (no .desktop suffix).
 # No-op silenzioso se posizione vuota.
 
@@ -8,10 +8,17 @@ set -euo pipefail
 N="${1:-}"
 [ -z "$N" ] && exit 0
 
-SETTINGS="$HOME/.config/noctalia/settings.json"
-[ ! -f "$SETTINGS" ] && exit 0
+STATE_TOML="$HOME/.local/state/noctalia/settings.toml"
+SETTINGS_JSON="$HOME/.config/noctalia/settings.json"
 
-APP=$(jq -r ".dock.pinnedApps[$((N-1))] // empty" "$SETTINGS" 2>/dev/null)
+APP=""
+if [ -f "$STATE_TOML" ]; then
+    # v5 TOML: dock.pinned = ["app1", "app2"]
+    APP=$(grep -A20 '^\[dock\]' "$STATE_TOML" | grep -oP 'pinned\s*=\s*\[\K[^]]+' | cut -d'"' -f2 | sed -n "${N}p")
+elif [ -f "$SETTINGS_JSON" ]; then
+    # v4 JSON fallback: dock.pinnedApps
+    APP=$(jq -r ".dock.pinnedApps[$((N-1))] // empty" "$SETTINGS_JSON" 2>/dev/null)
+fi
 [ -z "$APP" ] && exit 0   # no-op
 
 # gtk-launch accetta desktop-id (case-sensitive). Match anche fuzzy come fallback.
