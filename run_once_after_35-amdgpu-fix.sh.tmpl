@@ -1,12 +1,14 @@
 {{- if .disable_amdgpu_psr -}}
 #!/usr/bin/env bash
-# AMDGPU PSR disable — workaround flicker iGPU Radeon (Krackan/RDNA 3.5).
-# Aggiunge `amdgpu.dcdebugmask=0x10` alla cmdline della entry `linux-cachyos`
-# in /boot/limine.conf (NON tocca le snapshots). Gated da flag .disable_amdgpu_psr.
+# AMDGPU flicker workaround — iGPU Radeon (Krackan/RDNA 3.5).
+# Aggiunge alla cmdline di /boot/limine.conf (NON tocca le snapshots):
+#   amdgpu.dcdebugmask=0x10  — disabilita PSR (Panel Self Refresh)
+#   amdgpu.dpm=0             — disabilita power management dinamico (clock fisso)
+# Gated da flag .disable_amdgpu_psr.
 set -euo pipefail
 
 LIMINE=/boot/limine.conf
-PARAM='amdgpu.dcdebugmask=0x10'
+PARAMS='amdgpu.dcdebugmask=0x10 amdgpu.dpm=0'
 
 if ! sudo test -f "$LIMINE"; then
     echo "→ $LIMINE assente — skip (boot loader diverso?)"
@@ -18,9 +20,10 @@ if ! sudo grep -q "//linux-cachyos$" "$LIMINE" 2>/dev/null; then
     exit 0
 fi
 
-# Verifico se il param è già presente in una entry kernel (non snapshot)
-if sudo grep -q "rootflags=subvol=/@ .* $PARAM" "$LIMINE" 2>/dev/null; then
-    echo "✓ amdgpu PSR disable già presente in $LIMINE"
+# Verifico se i parametri sono già presenti in una entry kernel (non snapshot)
+if sudo grep -q "rootflags=subvol=/@ .* amdgpu.dcdebugmask=0x10" "$LIMINE" 2>/dev/null && \
+   sudo grep -q "rootflags=subvol=/@ .* amdgpu.dpm=0" "$LIMINE" 2>/dev/null; then
+    echo "✓ amdgpu flicker workaround già presente in $LIMINE"
     exit 0
 fi
 
@@ -28,11 +31,13 @@ BACKUP="$LIMINE.bak.$(date +%s)"
 sudo cp "$LIMINE" "$BACKUP"
 echo "→ backup creato: $BACKUP"
 
-# Aggiungo $PARAM in coda alla riga `cmdline:` delle entry kernel (linux-cachyos + lts)
+# Aggiungo i parametri in coda alla riga cmdline delle entry kernel (linux-cachyos + lts)
 # Matcha solo rootflags=subvol=/@ seguito da spazio (esclude snapshot che hanno /@/.snapshots/)
-sudo sed -i '/rootflags=subvol=\/@ /{'"$PARAM"'/!s|$| '"$PARAM"'|}' "$LIMINE"
+for PARAM in $PARAMS; do
+    sudo sed -i '/rootflags=subvol=\/@ /{'"$PARAM"'/!s|$| '"$PARAM"'|}' "$LIMINE"
+done
 
-echo "→ amdgpu PSR disable applicato in $LIMINE (reboot per attivare)"
+echo "→ amdgpu flicker workaround applicato in $LIMINE (reboot per attivare)"
 {{- else -}}
 #!/usr/bin/env bash
 # .disable_amdgpu_psr = false → no-op
